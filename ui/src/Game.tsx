@@ -21,6 +21,7 @@ import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
 import HistoryTable from './HistoryTable';
+import axios from './axios';
 
 interface GameHistory {
   boardState: (string | null)[][];
@@ -82,7 +83,7 @@ const Game: React.FC = () => {
     });
   };
 
-  const handlePieceSelect = (piece: string) => {
+  const handlePieceSelect = async (piece: string) => {
     if (selectedCell) {
       const { row, col } = selectedCell;
       setBoardState((prevBoardState) => {
@@ -95,7 +96,17 @@ const Game: React.FC = () => {
     }
   };
 
-  const startGame = () => {
+  const startGame = async () => {
+    try {
+      const res = await axios.post('/solve', {
+        board: boardState.map((r) => r.map((c) => (c ? c : ' ')))
+      });
+
+      console.log(res);
+    } catch (error) {
+      console.error(error);
+    }
+
     setInitialBoardState(boardState);
     setEditMode(false);
   };
