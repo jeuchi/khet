@@ -13,6 +13,8 @@ export const theme = createTheme({
   }
 });
 
+export const LASER_SPEED = 100;
+
 export const CELL_COLOR_1 = '#f0d9b5';
 export const CELL_COLOR_2 = '#b58863';
 

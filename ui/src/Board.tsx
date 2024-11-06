@@ -75,6 +75,7 @@ interface BoardProps {
   onCellClick?: (row: number, col: number) => void;
   onRemovePiece?: (row: number, col: number) => void;
   lastMove?: { from: { row: number; col: number }; to: { row: number; col: number } } | null;
+  laserPath?: { row: number; col: number; entry: string; exit: string }[];
 }
 
 const Board: React.FC<BoardProps> = ({
@@ -83,7 +84,8 @@ const Board: React.FC<BoardProps> = ({
   isEditable = false,
   onCellClick,
   onRemovePiece,
-  lastMove
+  lastMove,
+  laserPath = []
 }) => {
   const [selectedPiece, setSelectedPiece] = useState<{
     row: number;
@@ -110,9 +112,11 @@ const Board: React.FC<BoardProps> = ({
     e.dataTransfer.setData('text/plain', JSON.stringify({ row, col }));
     setSelectedPiece({ row, col });
     const piece = Piece[cellValue];
-    if (piece) {
+    if (piece && piece.moveList) {
       const moves = piece.moveList(boardState, { row, col });
       setPossibleMoves(moves);
+    } else {
+      setPossibleMoves([]);
     }
   };
 
@@ -149,6 +153,10 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
+    if (laserPath.length > 0) {
+      return;
+    }
+
     // Existing game mode logic
     if (cellValue) {
       // There is a piece at this cell
@@ -156,8 +164,12 @@ const Board: React.FC<BoardProps> = ({
       if (piece) {
         // Select the piece and show possible moves
         setSelectedPiece({ row, col });
-        const moves = piece.moveList(boardState, { row, col });
-        setPossibleMoves(moves);
+        if (piece.moveList) {
+          const moves = piece.moveList(boardState, { row, col });
+          setPossibleMoves(moves);
+        } else {
+          setPossibleMoves([]);
+        }
       }
     } else {
       // Empty cell
@@ -195,13 +207,44 @@ const Board: React.FC<BoardProps> = ({
     }
   };
 
+  const getCoordinate = (direction: string) => {
+    // Returns the x, y coordinate (0-100) for the given direction
+    switch (direction) {
+      case 'up':
+        return { x: 50, y: 0 };
+      case 'right':
+        return { x: 100, y: 50 };
+      case 'down':
+        return { x: 50, y: 100 };
+      case 'left':
+        return { x: 0, y: 50 };
+      default:
+        return { x: 50, y: 50 }; // Center of the cell
+    }
+  };
+
   return (
     <Box display="flex" justifyContent="center" alignItems="center" width="100%">
       <Box width="100vw" maxWidth="600px">
         <Grid container spacing={0} columns={columns}>
           {boardState.map((row, rowIndex) =>
             row.map((cellValue, colIndex) => {
+              // Split the cellValue by comma
+              let piece = null;
+              let rotation = '0';
+
+              if (cellValue !== null) {
+                [piece, rotation] = cellValue.split(',').map((part) => part.trim());
+
+                // If rotation is undefined, set it to '0'
+                rotation = rotation || '0';
+              }
+
               let borderRadius = '0';
+
+              const laserSegment = laserPath.find(
+                (pos) => pos.row === rowIndex && pos.col === colIndex
+              );
 
               if (rowIndex === 0 && colIndex === 0) {
                 borderRadius = '16px 0 0 0';
@@ -222,9 +265,9 @@ const Board: React.FC<BoardProps> = ({
                   <Cell
                     style={{
                       cursor:
-                        !cellValue && isEditable
+                        !piece && isEditable
                           ? 'pointer'
-                          : cellValue && !isEditable
+                          : piece && !isEditable
                           ? 'grab'
                           : 'default',
                       borderRadius,
@@ -237,7 +280,7 @@ const Board: React.FC<BoardProps> = ({
                           ? CELL_COLOR_1
                           : CELL_COLOR_2
                     }}
-                    onClick={() => handleCellClick(rowIndex, colIndex, cellValue)}
+                    onClick={() => handleCellClick(rowIndex, colIndex, piece)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
                   >
@@ -253,22 +296,58 @@ const Board: React.FC<BoardProps> = ({
                         </CellLabel>
                       )}
 
-                      {cellValue && (
+                      {piece && (
                         <>
                           <Sprite
-                            src={Piece[cellValue]?.image || ''}
+                            src={Piece[piece]?.image || ''}
                             alt={`Piece at ${rowIndex},${colIndex}`}
-                            draggable={!isEditable}
-                            onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, cellValue)}
+                            draggable={!isEditable && laserPath.length === 0}
+                            onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
                             onDragEnd={handleDragEnd}
+                            sx={{
+                              transform: `rotate(${rotation}deg) ${
+                                selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
+                                  ? 'scale(1.3)'
+                                  : ''
+                              }`
+                            }}
                           />
                           {isEditable && (
                             <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
                           )}
                         </>
                       )}
-                      {!cellValue && isEditable && <AddPieceIcon />}
-                      {!cellValue && isPossibleMove && <MoveHighlight />}
+                      {!piece && isEditable && <AddPieceIcon />}
+                      {!piece && isPossibleMove && <MoveHighlight />}
+
+                      {laserSegment && (
+                        <svg
+                          width="100%"
+                          height="100%"
+                          viewBox="0 0 100 100"
+                          xmlns="http://www.w3.org/2000/svg"
+                          style={{ position: 'absolute', top: 0, left: 0 }}
+                        >
+                          <defs>
+                            <filter id="glow">
+                              <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                              <feMerge>
+                                <feMergeNode in="coloredBlur" />
+                                <feMergeNode in="SourceGraphic" />
+                              </feMerge>
+                            </filter>
+                          </defs>
+                          <line
+                            x1={getCoordinate(laserSegment.entry).x}
+                            y1={getCoordinate(laserSegment.entry).y}
+                            x2={getCoordinate(laserSegment.exit).x}
+                            y2={getCoordinate(laserSegment.exit).y}
+                            stroke="red"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      )}
                     </CellContent>
                   </Cell>
                 </Grid>

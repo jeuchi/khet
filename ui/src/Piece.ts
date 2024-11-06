@@ -1,10 +1,13 @@
 // Piece.ts
 import RedKingImage from './assets/red-king.svg';
 import BlueKingImage from './assets/blue-king.svg';
+import RedLaser from './assets/red-laser.svg';
+import BlueLaser from './assets/blue-laser.svg';
 
 export interface Piece {
   image: string;
-  moveList: (
+  readonly?: boolean;
+  moveList?: (
     boardState: (string | null)[][],
     position: { row: number; col: number }
   ) => { row: number; col: number }[];
@@ -42,6 +45,14 @@ const Piece: { [key: string]: Piece } = {
   bk: {
     image: BlueKingImage,
     moveList: KingMoveList
+  },
+  rl: {
+    image: RedLaser,
+    readonly: true
+  },
+  bl: {
+    image: BlueLaser,
+    readonly: true
   }
 };
 
