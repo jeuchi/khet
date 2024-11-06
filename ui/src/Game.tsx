@@ -327,10 +327,15 @@ const Game: React.FC = () => {
     const [pieceType, direction] = piece.split(',');
     const rotation = DIRECTION_TO_ROTATION[direction] || 0;
 
+    console.log('Piece:', pieceType, 'Direction:', incomingDirection, 'Rotation:', rotation);
+
     switch (pieceType) {
       case 'rpy':
       case 'spy':
         return getPyramidReflection(rotation, incomingDirection);
+      case 'rsc':
+      case 'ssc':
+        return getScarabReflection(rotation, incomingDirection);
       default:
         break;
     }
@@ -345,6 +350,18 @@ const Game: React.FC = () => {
       90: { right: 'up', down: 'left' },
       180: { left: 'up', down: 'right' },
       270: { up: 'right', left: 'down' }
+    };
+
+    const reflectionMap = mirrorReflections[rotation % 360];
+    return reflectionMap ? reflectionMap[incomingDirection] || null : null;
+  };
+
+  const getScarabReflection = (rotation: number, incomingDirection: string): string | null => {
+    const mirrorReflections: { [key: number]: { [key: string]: string } } = {
+      0: { up: 'left', right: 'down', left: 'up', down: 'right' },
+      90: { right: 'up', down: 'left', left: 'down', up: 'right' },
+      180: { left: 'up', down: 'right', right: 'down', up: 'left' },
+      270: { up: 'right', left: 'down', right: 'up', down: 'left' }
     };
 
     const reflectionMap = mirrorReflections[rotation % 360];

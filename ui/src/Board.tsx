@@ -249,8 +249,16 @@ const Board: React.FC<BoardProps> = ({
               let piece = null;
               let direction = 'up';
 
+              let canRotate = false;
+
               if (cellValue !== null) {
                 [piece, direction] = cellValue.split(',').map((part) => part.trim());
+              }
+
+              if (piece) {
+                if (isEditable || (piece !== 'ssp' && piece !== 'rsp')) {
+                  canRotate = true;
+                }
               }
 
               let borderRadius = '0';
@@ -342,9 +350,14 @@ const Board: React.FC<BoardProps> = ({
                             <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
                           )}
 
-                          {Piece[piece]?.rotate && (
+                          {canRotate && (
                             <div
-                              style={{ position: 'absolute', bottom: 4, display: 'flex', gap: 8 }}
+                              style={{
+                                position: 'absolute',
+                                bottom: 4,
+                                display: 'flex',
+                                gap: 8
+                              }}
                             >
                               <RotateLeftIcon
                                 onClick={(e) => {

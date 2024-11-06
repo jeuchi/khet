@@ -5,6 +5,8 @@ import RedPharaoh from './assets/red-pharaoh.svg';
 import SilverPharaoh from './assets/silver-pharaoh.svg';
 import RedPyramid from './assets/red-pyramid.svg';
 import SilverPyramid from './assets/silver-pyramid.svg';
+import RedScarab from './assets/red-scarab.png';
+import SilverScarab from './assets/silver-scarab.png';
 
 export interface Piece {
   image: string;
@@ -54,6 +56,10 @@ const Piece: { [key: string]: Piece } = {
     image: RedPyramid,
     rotate: true
   },
+  rsc: {
+    image: RedScarab,
+    rotate: true
+  },
   ssp: {
     image: SilverSphix,
     moveList: KingMoveList,
@@ -68,6 +74,10 @@ const Piece: { [key: string]: Piece } = {
     image: SilverPyramid,
     rotate: true
   },
+  ssc: {
+    image: SilverScarab,
+    rotate: true
+  }
 };
 
 export default Piece;
