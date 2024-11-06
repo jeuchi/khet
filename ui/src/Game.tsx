@@ -93,8 +93,6 @@ const Game: React.FC = () => {
     const newBoardState = Array.from({ length: newRows }, () =>
       Array.from({ length: newCols }, () => '')
     );
-    newBoardState[0][0] = 'rl,180';
-    newBoardState[newRows - 1][newCols - 1] = 'bl';
     setBoardState(newBoardState);
   };
 
