@@ -23,3 +23,10 @@ export const ADD_PIECE_COLOR = green[900];
 export const MOVE_HIGHLIGHT_COLOR = green[900];
 export const LAST_MOVE_FROM_COLOR = yellow[200];
 export const LAST_MOVE_TO_COLOR = yellow[400];
+
+export const DIRECTION_TO_ROTATION: { [key: string]: number } = {
+  up: 0,
+  right: 90,
+  down: 180,
+  left: 270
+};

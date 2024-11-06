@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Button,
   TextField,
@@ -22,19 +22,20 @@ import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
-import { LASER_SPEED } from './constants';
+import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 
 interface GameHistory {
   boardState: (string | null)[][];
   from: { row: number; col: number };
   to: { row: number; col: number };
   move: string;
+  rotationAngles?: { [key: string]: number };
 }
 
 const INITIAL_BOARD = [
-  ['rl,180', '', ''],
-  ['', '', ''],
-  ['', '', 'bl']
+  ['rsp,down', 'rph', ''],
+  ['', '', 'spy'],
+  ['', '', 'ssp']
 ];
 
 // Direction vectors
@@ -80,6 +81,7 @@ const Game: React.FC = () => {
       exit: string;
     }[]
   >([]);
+  const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
 
   const handleBoardSizeChange = (newRows: number, newCols: number) => {
     if (newRows < 2 || newCols < 2) return;
@@ -88,8 +90,8 @@ const Game: React.FC = () => {
     setRows(newRows);
     setCols(newCols);
     // Fill the new board with empty strings except the rl in top left and bl in bottom right
-    const newBoardState = Array.from({ length: newRows }, (_, i) =>
-      Array.from({ length: newCols }, (_, _j) => '')
+    const newBoardState = Array.from({ length: newRows }, () =>
+      Array.from({ length: newCols }, () => '')
     );
     newBoardState[0][0] = 'rl,180';
     newBoardState[newRows - 1][newCols - 1] = 'bl';
@@ -131,6 +133,7 @@ const Game: React.FC = () => {
       console.log(res);
     } catch (error) {
       // TODO
+      console.error(error);
     }
 
     setInitialBoardState(boardState);
@@ -139,6 +142,7 @@ const Game: React.FC = () => {
 
   const resetGame = () => {
     setGameOver(false);
+    setRotationAngles({});
     setBoardState(initialBoardState);
     setGameHistory([]);
     setLastMove(null);
@@ -157,6 +161,7 @@ const Game: React.FC = () => {
         to: gameHistory[gameHistory.length - 1].to
       });
       setBoardState(gameHistory[gameHistory.length - 1].boardState);
+      setRotationAngles(gameHistory[gameHistory.length - 1].rotationAngles || {});
       return;
     }
 
@@ -178,83 +183,66 @@ const Game: React.FC = () => {
     }${rowLabels[toPosition.row]}`;
     setGameHistory([
       ...gameHistory,
-      { boardState: newBoardState, move: log, from: fromPosition, to: toPosition }
+      {
+        boardState: newBoardState,
+        move: log,
+        from: fromPosition,
+        to: toPosition,
+        rotationAngles: rotationAngles
+      }
     ]);
     setLastMove({ from: fromPosition, to: toPosition });
     setCurrentMove(gameHistory.length);
-
-    // Animate laser from 'bl' only
-    animateLaser(newBoardState);
   };
 
   const animateLaser = (currentBoardState: (string | null)[][]) => {
+    if (editMode) return;
+
     // Find the 'bl' piece on the board
-    let blPosition = null;
-    let blRotation = 0;
+    let silverSphinxPos = null;
+    let direction = 'up';
 
     for (let i = 0; i < currentBoardState.length; i++) {
       for (let j = 0; j < currentBoardState[i].length; j++) {
         const cell = currentBoardState[i][j];
-        if (cell && cell.startsWith('bl')) {
-          blPosition = { row: i, col: j };
+        if (cell && cell.startsWith('ssp')) {
+          silverSphinxPos = { row: i, col: j };
           // Extract rotation if any
           const parts = cell.split(',');
           if (parts.length > 1) {
-            blRotation = parseInt(parts[1], 10);
-          } else {
-            blRotation = 0;
+            direction = parts[1];
           }
           break;
         }
       }
-      if (blPosition) {
+      if (silverSphinxPos) {
         break;
       }
     }
 
-    if (!blPosition) {
-      console.error('No blue laser "bl" found on the board.');
+    if (!silverSphinxPos) {
+      console.error('No silver sphix "ssp" found on the board.');
       return;
     }
 
-    // Map rotation to direction
-    let direction = '';
-    switch (blRotation % 360) {
-      case 0:
-        direction = 'up';
-        break;
-      case 90:
-        direction = 'right';
-        break;
-      case 180:
-        direction = 'down';
-        break;
-      case 270:
-        direction = 'left';
-        break;
-      default:
-        console.error(`Invalid rotation ${blRotation}`);
-        return;
-    }
-
     // Simulate laser path
-    let path: {
+    const path: {
       row: number;
       col: number;
       entry: string; // Entry direction into the cell
       exit: string; // Exit direction from the cell
     }[] = [];
 
-    let x = blPosition.col;
-    let y = blPosition.row;
+    let x = silverSphinxPos.col;
+    let y = silverSphinxPos.row;
     let currentDirection = direction;
     let steps = 0;
     const maxSteps = 100; // To prevent infinite loops
 
     // Add the initial segment from the laser source
     path.push({
-      row: blPosition.row,
-      col: blPosition.col,
+      row: silverSphinxPos.row,
+      col: silverSphinxPos.col,
       entry: '', // The laser starts moving in the initial direction
       exit: direction
     });
@@ -267,8 +255,6 @@ const Game: React.FC = () => {
       }
 
       const { dx, dy } = directions[currentDirection];
-      const prevX = x;
-      const prevY = y;
       x += dx;
       y += dy;
 
@@ -301,7 +287,7 @@ const Game: React.FC = () => {
         } else {
           // Laser is blocked or absorbed, end animation
           console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', cell);
-          if (cell === 'rk' || cell === 'bk') {
+          if (cell === 'rph' || cell === 'sph') {
             setGameOver(true);
             path.push({
               row: y,
@@ -310,6 +296,12 @@ const Game: React.FC = () => {
               exit: ''
             });
             setLaserPath([...path]);
+          } else {
+            // Piece is dead, remove it from the board
+            const newBoardState = currentBoardState.map((r) => r.slice());
+            newBoardState[y][x] = null;
+            setBoardState(newBoardState);
+            setLaserPath([]);
           }
         }
         return;
@@ -334,40 +326,124 @@ const Game: React.FC = () => {
   };
 
   const handleReflection = (piece: string, incomingDirection: string): string | null => {
-    const [pieceType, rotationStr] = piece.split(',');
-    const rotation = parseInt(rotationStr) || 0;
+    const [pieceType, direction] = piece.split(',');
+    const rotation = DIRECTION_TO_ROTATION[direction] || 0;
 
     switch (pieceType) {
-      case 'mirror':
-        // Define mirror reflection logic based on rotation
-        // For example, '/' and '\' mirrors
-        return getMirrorReflection(rotation, incomingDirection);
+      case 'rpy':
+      case 'spy':
+        return getPyramidReflection(rotation, incomingDirection);
       default:
-        // Dead piece, laser is absorbed
-        return null;
+        break;
     }
 
+    // Dead piece, laser is absorbed
     return null;
   };
 
-  const getMirrorReflection = (rotation: number, incomingDirection: string): string | null => {
+  const getPyramidReflection = (rotation: number, incomingDirection: string): string | null => {
     const mirrorReflections: { [key: number]: { [key: string]: string } } = {
-      0: { up: 'right', right: 'up', down: 'left', left: 'down' }, // '/' mirror at 0 degrees
-      90: { up: 'left', right: 'down', down: 'right', left: 'up' }, // '\' mirror at 90 degrees
-      180: { up: 'left', right: 'down', down: 'right', left: 'up' }, // '/' mirror at 180 degrees
-      270: { up: 'right', right: 'up', down: 'left', left: 'down' } // '\' mirror at 270 degrees
+      0: { up: 'left', right: 'down' },
+      90: { right: 'up', down: 'left' },
+      180: { left: 'up', down: 'right' },
+      270: { up: 'right', left: 'down' }
     };
 
     const reflectionMap = mirrorReflections[rotation % 360];
     return reflectionMap ? reflectionMap[incomingDirection] || null : null;
   };
 
+  const handleRotatePiece = (row: number, col: number, rotationDirection: string) => {
+    const cellValue = boardState[row][col];
+    if (!cellValue) return; // No piece to rotate
+    const [pieceName, oldDirection] = cellValue.split(',').map((part) => part.trim());
+
+    let newDirection = '';
+
+    // Calculate the new rotation angle
+    const cellKey = `${row}-${col}`;
+    const previousRotation = rotationAngles[cellKey] || DIRECTION_TO_ROTATION[oldDirection] | 0;
+    const rotationDelta = rotationDirection === 'left' ? -90 : 90;
+    const newRotation = previousRotation + rotationDelta;
+
+    // Update the rotation angle in state
+    const newRotationAngles = { ...rotationAngles, [cellKey]: newRotation };
+
+    setRotationAngles(newRotationAngles);
+
+    switch (oldDirection) {
+      case 'left':
+        if (rotationDirection === 'left') {
+          newDirection = 'down';
+        } else {
+          newDirection = 'up';
+        }
+        break;
+      case 'right':
+        if (rotationDirection === 'left') {
+          newDirection = 'up';
+        } else {
+          newDirection = 'down';
+        }
+        break;
+      case 'down':
+        if (rotationDirection === 'left') {
+          newDirection = 'right';
+        } else {
+          newDirection = 'left';
+        }
+        break;
+      case 'up':
+      default:
+        if (rotationDirection === 'left') {
+          newDirection = 'left';
+        } else {
+          newDirection = 'right';
+        }
+        break;
+    }
+
+    const newCellValue = `${pieceName},${newDirection}`;
+
+    // Same as moving piece, we will just rotate the piece in place
+    const newBoardState = boardState.map((r) => r.slice());
+    newBoardState[row][col] = newCellValue;
+    setBoardState(newBoardState);
+
+    if (editMode) return;
+
+    const [pieceType] = newCellValue.split(',');
+
+    const log = `Rotate ${pieceType}`;
+    const fromPosition = { row, col };
+    const toPosition = { row, col };
+
+    setGameHistory([
+      ...gameHistory,
+      {
+        boardState: newBoardState,
+        move: log,
+        from: fromPosition,
+        to: toPosition,
+        rotationAngles: newRotationAngles
+      }
+    ]);
+    setLastMove({ from: fromPosition, to: toPosition });
+    setCurrentMove(gameHistory.length);
+  };
+
+  useEffect(() => {
+    if (currentMove >= gameHistory.length || gameHistory.length === 0) return;
+    const currentBoardState = gameHistory[currentMove].boardState;
+    animateLaser(currentBoardState);
+  }, [gameHistory, currentMove]);
+
   const availablePieces = Object.keys(Piece);
 
   return (
     <Stack>
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
-        Laser Chess
+        Khet
       </Typography>
       {gameOver && (
         <Typography variant="h5" align="center" style={{ marginBottom: 25, color: 'red' }}>
@@ -382,7 +458,10 @@ const Game: React.FC = () => {
             onCellClick={handleCellClick}
             onRemovePiece={handleRemovePiece}
             isEditable={true}
-            laserPath={laserPath} // Pass laserPath to Board
+            laserPath={laserPath}
+            onRotatePiece={handleRotatePiece}
+            rotationAngles={rotationAngles}
+            onRotationAnglesChange={setRotationAngles}
           />
 
           <Paper elevation={20} sx={{ width: '300px', borderRadius: 5 }}>
@@ -443,18 +522,18 @@ const Game: React.FC = () => {
             <DialogTitle>Select a Piece</DialogTitle>
             <DialogContent>
               <Grid container spacing={2}>
-                {availablePieces.map((pieceKey) =>
-                  Piece[pieceKey].readonly ? null : (
-                    <Grid item xs={3} key={pieceKey}>
-                      <img
-                        src={Piece[pieceKey].image}
-                        alt={pieceKey}
-                        onClick={() => handlePieceSelect(pieceKey)}
-                        style={{ cursor: 'pointer', maxWidth: '100%' }}
-                      />
-                    </Grid>
-                  )
-                )}
+                {availablePieces.map((pieceKey) => (
+                  <Grid item xs={3} key={pieceKey}>
+                    <img
+                      src={Piece[pieceKey].image}
+                      width={100}
+                      height={100}
+                      alt={pieceKey}
+                      onClick={() => handlePieceSelect(pieceKey)}
+                      style={{ cursor: 'pointer', maxWidth: '100%' }}
+                    />
+                  </Grid>
+                ))}
               </Grid>
             </DialogContent>
             <DialogActions>
@@ -468,7 +547,10 @@ const Game: React.FC = () => {
             boardState={boardState}
             onMovePiece={handleMovePiece}
             lastMove={lastMove}
-            laserPath={laserPath} // Pass laserPath to Board
+            laserPath={laserPath}
+            onRotatePiece={handleRotatePiece}
+            rotationAngles={rotationAngles}
+            onRotationAnglesChange={setRotationAngles}
           />
 
           <Paper elevation={20} sx={{ width: '400px', borderRadius: 5 }}>
@@ -479,6 +561,7 @@ const Game: React.FC = () => {
                 setLastMove={setLastMove}
                 currentMove={currentMove}
                 setCurrentMove={setCurrentMove}
+                setRotationAngles={setRotationAngles}
               />
 
               <Stack direction="row" alignContent={'space-evenly'} spacing={2}>
@@ -504,6 +587,7 @@ const Game: React.FC = () => {
                           from: gameHistory[newMove].from,
                           to: gameHistory[newMove].to
                         });
+                        setRotationAngles(gameHistory[newMove].rotationAngles || {});
                       }}
                       color="primary"
                     >
@@ -527,6 +611,7 @@ const Game: React.FC = () => {
                           from: gameHistory[newMove].from,
                           to: gameHistory[newMove].to
                         });
+                        setRotationAngles(gameHistory[newMove].rotationAngles || {});
                       }}
                       color="primary"
                     >

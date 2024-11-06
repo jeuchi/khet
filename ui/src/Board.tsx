@@ -5,6 +5,8 @@ import { Box } from '@mui/material';
 import Piece from './Piece';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import RotateLeftIcon from '@mui/icons-material/RotateLeft';
+import RotateRightIcon from '@mui/icons-material/RotateRight';
 import {
   CELL_COLOR_1,
   CELL_COLOR_2,
@@ -12,7 +14,8 @@ import {
   REMOVE_PIECE_COLOR,
   ADD_PIECE_COLOR,
   LAST_MOVE_FROM_COLOR,
-  LAST_MOVE_TO_COLOR
+  LAST_MOVE_TO_COLOR,
+  DIRECTION_TO_ROTATION
 } from './constants';
 
 const Cell = styled('div')({
@@ -36,8 +39,8 @@ const CellContent = styled('div')({
 });
 
 const Sprite = styled('img')({
-  maxWidth: '50%',
-  maxHeight: '50%',
+  maxWidth: '70%',
+  maxHeight: '70%',
   transition: 'transform 0.3s'
 });
 
@@ -76,6 +79,9 @@ interface BoardProps {
   onRemovePiece?: (row: number, col: number) => void;
   lastMove?: { from: { row: number; col: number }; to: { row: number; col: number } } | null;
   laserPath?: { row: number; col: number; entry: string; exit: string }[];
+  onRotatePiece: (row: number, col: number, direction: string) => void;
+  rotationAngles: { [key: string]: number };
+  onRotationAnglesChange: (rotationAngles: { [key: string]: number }) => void;
 }
 
 const Board: React.FC<BoardProps> = ({
@@ -85,7 +91,10 @@ const Board: React.FC<BoardProps> = ({
   onCellClick,
   onRemovePiece,
   lastMove,
-  laserPath = []
+  laserPath = [],
+  onRotatePiece,
+  rotationAngles,
+  onRotationAnglesChange
 }) => {
   const [selectedPiece, setSelectedPiece] = useState<{
     row: number;
@@ -161,7 +170,7 @@ const Board: React.FC<BoardProps> = ({
     if (cellValue) {
       // There is a piece at this cell
       const piece = Piece[cellValue];
-      if (piece) {
+      if (piece && piece.moveList) {
         // Select the piece and show possible moves
         setSelectedPiece({ row, col });
         if (piece.moveList) {
@@ -170,6 +179,9 @@ const Board: React.FC<BoardProps> = ({
         } else {
           setPossibleMoves([]);
         }
+      } else {
+        setSelectedPiece(null);
+        setPossibleMoves([]);
       }
     } else {
       // Empty cell
@@ -223,6 +235,10 @@ const Board: React.FC<BoardProps> = ({
     }
   };
 
+  const handleRotatePiece = (row: number, col: number, rotationDirection: string) => {
+    onRotatePiece(row, col, rotationDirection);
+  };
+
   return (
     <Box display="flex" justifyContent="center" alignItems="center" width="100%">
       <Box width="100vw" maxWidth="600px">
@@ -231,13 +247,10 @@ const Board: React.FC<BoardProps> = ({
             row.map((cellValue, colIndex) => {
               // Split the cellValue by comma
               let piece = null;
-              let rotation = '0';
+              let direction = 'up';
 
               if (cellValue !== null) {
-                [piece, rotation] = cellValue.split(',').map((part) => part.trim());
-
-                // If rotation is undefined, set it to '0'
-                rotation = rotation || '0';
+                [piece, direction] = cellValue.split(',').map((part) => part.trim());
               }
 
               let borderRadius = '0';
@@ -259,6 +272,19 @@ const Board: React.FC<BoardProps> = ({
               const isPossibleMove = possibleMoves.some(
                 (move) => move.row === rowIndex && move.col === colIndex
               );
+
+              // Get rotation angle from state or default
+              const cellKey = `${rowIndex}-${colIndex}`;
+              let rotation = rotationAngles[cellKey];
+
+              if (rotation === undefined) {
+                rotation = DIRECTION_TO_ROTATION[direction] || 0;
+                // Initialize the rotation angle in state
+                onRotationAnglesChange({
+                  ...rotationAngles,
+                  [cellKey]: rotation
+                });
+              }
 
               return (
                 <Grid item xs={1} key={`${rowIndex}-${colIndex}`}>
@@ -314,6 +340,27 @@ const Board: React.FC<BoardProps> = ({
                           />
                           {isEditable && (
                             <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
+                          )}
+
+                          {Piece[piece]?.rotate && (
+                            <div
+                              style={{ position: 'absolute', bottom: 4, display: 'flex', gap: 8 }}
+                            >
+                              <RotateLeftIcon
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRotatePiece(rowIndex, colIndex, 'left');
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <RotateRightIcon
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRotatePiece(rowIndex, colIndex, 'right');
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </div>
                           )}
                         </>
                       )}

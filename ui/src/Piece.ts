@@ -1,12 +1,14 @@
 // Piece.ts
-import RedKingImage from './assets/red-king.svg';
-import BlueKingImage from './assets/blue-king.svg';
-import RedLaser from './assets/red-laser.svg';
-import BlueLaser from './assets/blue-laser.svg';
+import RedSphinx from './assets/red-sphinx.svg';
+import SilverSphix from './assets/silver-sphinx.svg';
+import RedPharaoh from './assets/red-pharaoh.svg';
+import SilverPharaoh from './assets/silver-pharaoh.svg';
+import RedPyramid from './assets/red-pyramid.svg';
+import SilverPyramid from './assets/silver-pyramid.svg';
 
 export interface Piece {
   image: string;
-  readonly?: boolean;
+  rotate?: boolean;
   moveList?: (
     boardState: (string | null)[][],
     position: { row: number; col: number }
@@ -38,22 +40,34 @@ const KingMoveList = (boardState: (string | null)[][], position: { row: number; 
 };
 
 const Piece: { [key: string]: Piece } = {
-  rk: {
-    image: RedKingImage,
-    moveList: KingMoveList
+  rsp: {
+    image: RedSphinx,
+    moveList: KingMoveList,
+    rotate: true
   },
-  bk: {
-    image: BlueKingImage,
-    moveList: KingMoveList
+  rph: {
+    image: RedPharaoh,
+    moveList: KingMoveList,
+    rotate: true
   },
-  rl: {
-    image: RedLaser,
-    readonly: true
+  rpy: {
+    image: RedPyramid,
+    rotate: true
   },
-  bl: {
-    image: BlueLaser,
-    readonly: true
-  }
+  ssp: {
+    image: SilverSphix,
+    moveList: KingMoveList,
+    rotate: true
+  },
+  sph: {
+    image: SilverPharaoh,
+    moveList: KingMoveList,
+    rotate: true
+  },
+  spy: {
+    image: SilverPyramid,
+    rotate: true
+  },
 };
 
 export default Piece;

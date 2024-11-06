@@ -9,7 +9,14 @@ import {
   Paper
 } from '@mui/material';
 
-function GameHistory({ gameHistory, currentMove, setCurrentMove, setLastMove, setBoardState }) {
+function GameHistory({
+  gameHistory,
+  currentMove,
+  setCurrentMove,
+  setLastMove,
+  setBoardState,
+  setRotationAngles
+}) {
   return (
     <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
       <Typography variant="h6">Game History</Typography>
@@ -25,6 +32,7 @@ function GameHistory({ gameHistory, currentMove, setCurrentMove, setLastMove, se
                   setCurrentMove(index);
                   setLastMove({ from: history.from, to: history.to });
                   setBoardState(history.boardState);
+                  setRotationAngles(history.rotationAngles);
                 }}
                 sx={{ cursor: 'pointer' }}
               >
