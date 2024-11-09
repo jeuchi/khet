@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import { Box } from '@mui/material';
-import Piece from './Piece';
+import { Pieces, PieceType } from './Piece';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
@@ -17,6 +17,8 @@ import {
   LAST_MOVE_TO_COLOR,
   DIRECTION_TO_ROTATION
 } from './constants';
+import SilverAnkh from './assets/silver-ankh.svg';
+import RedEye from './assets/red-eye.svg';
 
 const Cell = styled('div')({
   position: 'relative',
@@ -115,12 +117,12 @@ const Board: React.FC<BoardProps> = ({
     e: React.DragEvent<HTMLImageElement>,
     row: number,
     col: number,
-    cellValue: string
+    cellValue: PieceType
   ) => {
     if (isEditable) return; // Disable dragging in edit mode
     e.dataTransfer.setData('text/plain', JSON.stringify({ row, col }));
     setSelectedPiece({ row, col });
-    const piece = Piece[cellValue];
+    const piece = Pieces[cellValue];
     if (piece && piece.moveList) {
       const moves = piece.moveList(boardState, { row, col });
       setPossibleMoves(moves);
@@ -153,7 +155,7 @@ const Board: React.FC<BoardProps> = ({
     setPossibleMoves([]);
   };
 
-  const handleCellClick = (row: number, col: number, cellValue: string | null) => {
+  const handleCellClick = (row: number, col: number, cellValue: PieceType | null) => {
     if (isEditable) {
       if (!cellValue && onCellClick) {
         // Empty cell, open piece selection dialog
@@ -169,7 +171,7 @@ const Board: React.FC<BoardProps> = ({
     // Existing game mode logic
     if (cellValue) {
       // There is a piece at this cell
-      const piece = Piece[cellValue];
+      const piece = Pieces[cellValue];
       if (piece && piece.moveList) {
         // Select the piece and show possible moves
         setSelectedPiece({ row, col });
@@ -239,6 +241,12 @@ const Board: React.FC<BoardProps> = ({
     onRotatePiece(row, col, rotationDirection);
   };
 
+  useEffect(() => {
+    // Clear selected piece and possible moves when board state changes
+    setSelectedPiece(null);
+    setPossibleMoves([]);
+  }, [boardState]);
+
   return (
     <Box display="flex" justifyContent="center" alignItems="center" width="100%">
       <Box width="100vw" maxWidth="600px">
@@ -246,20 +254,22 @@ const Board: React.FC<BoardProps> = ({
           {boardState.map((row, rowIndex) =>
             row.map((cellValue, colIndex) => {
               // Split the cellValue by comma
-              let piece = null;
+              let piece: PieceType | null = null;
               let direction = 'up';
 
-              let canRotate = false;
+              let canRotate = true;
 
               if (cellValue !== null) {
-                [piece, direction] = cellValue.split(',').map((part) => part.trim());
+                const [pieceStr, direction] = cellValue.split(',').map((part) => part.trim());
+                piece = pieceStr as PieceType;
               }
 
+              /*
               if (piece) {
                 if (isEditable || (piece !== 'ssp' && piece !== 'rsp')) {
                   canRotate = true;
                 }
-              }
+              }*/
 
               let borderRadius = '0';
 
@@ -333,7 +343,7 @@ const Board: React.FC<BoardProps> = ({
                       {piece && (
                         <>
                           <Sprite
-                            src={Piece[piece]?.image || ''}
+                            src={Pieces[piece].image}
                             alt={`Piece at ${rowIndex},${colIndex}`}
                             draggable={!isEditable && laserPath.length === 0}
                             onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
@@ -380,6 +390,31 @@ const Board: React.FC<BoardProps> = ({
                       {!piece && isEditable && <AddPieceIcon />}
                       {!piece && isPossibleMove && <MoveHighlight />}
 
+                      {(boardState[0].length - 1 === colIndex ||
+                        (rowIndex === 0 && colIndex === 1) ||
+                        (rowIndex === boardState.length - 1 && colIndex === 1)) && (
+                        <Sprite
+                          src={SilverAnkh}
+                          alt="Silver Ankh"
+                          sx={{ position: 'absolute', left: '10px', top: '10px' }}
+                          width={'20%'}
+                          height={'20%'}
+                        />
+                      )}
+
+                      {(colIndex === 0 ||
+                        (colIndex === boardState[0].length - 2 && rowIndex === 0) ||
+                        (colIndex === boardState[0].length - 2 &&
+                          rowIndex === boardState.length - 1)) && (
+                        <Sprite
+                          src={RedEye}
+                          alt="Red Eye"
+                          sx={{ position: 'absolute', left: '10px', top: '10px' }}
+                          width={'20%'}
+                          height={'20%'}
+                        />
+                      )}
+
                       {laserSegment && (
                         <svg
                           width="100%"
@@ -400,6 +435,15 @@ const Board: React.FC<BoardProps> = ({
                           <line
                             x1={getCoordinate(laserSegment.entry).x}
                             y1={getCoordinate(laserSegment.entry).y}
+                            x2={50}
+                            y2={50}
+                            stroke="red"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1={50}
+                            y1={50}
                             x2={getCoordinate(laserSegment.exit).x}
                             y2={getCoordinate(laserSegment.exit).y}
                             stroke="red"

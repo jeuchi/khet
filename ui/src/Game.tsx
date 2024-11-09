@@ -14,7 +14,7 @@ import {
   Tooltip
 } from '@mui/material';
 import Board from './Board';
-import Piece from './Piece';
+import { Pieces, PieceType } from './Piece';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOff from '@mui/icons-material/LinkOff';
 import ArrowLeft from '@mui/icons-material/ArrowLeft';
@@ -33,9 +33,10 @@ interface GameHistory {
 }
 
 const INITIAL_BOARD = [
-  ['rsp,down', 'rph', ''],
-  ['', '', 'spy'],
-  ['', '', 'ssp']
+  ['red_sphinx,down', 'red_anubis', 'red_pharaoh', ''],
+  ['', '', 'silver_pyramid', ''],
+  ['', '', '', ''],
+  ['', 'silver_pharaoh', 'silver_anubis', 'silver_sphinx']
 ];
 
 // Direction vectors
@@ -58,8 +59,8 @@ const Game: React.FC = () => {
   const [editMode, setEditMode] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [linkOn, setLinkOn] = useState(true);
-  const [rows, setRows] = useState(3);
-  const [cols, setCols] = useState(3);
+  const [rows, setRows] = useState(4);
+  const [cols, setCols] = useState(4);
   const [currentMove, setCurrentMove] = useState<number>(0);
   const [lastMove, setLastMove] = useState<{
     from: { row: number; col: number };
@@ -84,7 +85,7 @@ const Game: React.FC = () => {
   const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
 
   const handleBoardSizeChange = (newRows: number, newCols: number) => {
-    if (newRows < 2 || newCols < 2) return;
+    if (newRows < 4 || newCols < 4) return;
     if (newRows > 10 || newCols > 10) return;
 
     setRows(newRows);
@@ -93,6 +94,7 @@ const Game: React.FC = () => {
     const newBoardState = Array.from({ length: newRows }, () =>
       Array.from({ length: newCols }, () => '')
     );
+
     setBoardState(newBoardState);
   };
 
@@ -163,7 +165,7 @@ const Game: React.FC = () => {
       return;
     }
 
-    const piece = boardState[fromPosition.row][fromPosition.col];
+    const [piece, direction] = boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
     if (!piece) return;
 
     const columnLabels = Array.from({ length: cols }, (_, i) =>
@@ -171,8 +173,16 @@ const Game: React.FC = () => {
     );
     const rowLabels = Array.from({ length: rows }, (_, i) => String(rows - i));
 
+    // Update the board rotation angles
+    const newRotationAngles = { ...rotationAngles };
+    const fromCellKey = `${fromPosition.row}-${fromPosition.col}`;
+    const toCellKey = `${toPosition.row}-${toPosition.col}`;
+    newRotationAngles[toCellKey] = newRotationAngles[fromCellKey] || 0;
+    delete newRotationAngles[fromCellKey];
+    setRotationAngles(newRotationAngles);
+
     const newBoardState = boardState.map((r) => r.slice());
-    newBoardState[toPosition.row][toPosition.col] = piece;
+    newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
     newBoardState[fromPosition.row][fromPosition.col] = null;
 
     setBoardState(newBoardState);
@@ -186,7 +196,7 @@ const Game: React.FC = () => {
         move: log,
         from: fromPosition,
         to: toPosition,
-        rotationAngles: rotationAngles
+        rotationAngles: newRotationAngles
       }
     ]);
     setLastMove({ from: fromPosition, to: toPosition });
@@ -203,7 +213,7 @@ const Game: React.FC = () => {
     for (let i = 0; i < currentBoardState.length; i++) {
       for (let j = 0; j < currentBoardState[i].length; j++) {
         const cell = currentBoardState[i][j];
-        if (cell && cell.startsWith('ssp')) {
+        if (cell && cell.startsWith('silver_sphinx')) {
           silverSphinxPos = { row: i, col: j };
           // Extract rotation if any
           const parts = cell.split(',');
@@ -285,7 +295,7 @@ const Game: React.FC = () => {
         } else {
           // Laser is blocked or absorbed, end animation
           console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', cell);
-          if (cell === 'rph' || cell === 'sph') {
+          if (cell === 'red_pharaoh' || cell === 'silver_pharaoh') {
             setGameOver(true);
             path.push({
               row: y,
@@ -294,6 +304,34 @@ const Game: React.FC = () => {
               exit: ''
             });
             setLaserPath([...path]);
+          } else if (cell === 'red_anubis' || cell === 'silver_anubis') {
+            // Check if the anubis is facing the laser. Note that 'up' is the default direction
+            // and Anubis piece is looking towards the right. If he's looking towards the laser,
+            // the laser will be absorbed otherwise he will die.
+            const anubisDirection = cell.split(',')[1] || 'up';
+            if (
+              (anubisDirection === 'up' && currentDirection === 'left') ||
+              (anubisDirection === 'right' && currentDirection === 'up') ||
+              (anubisDirection === 'down' && currentDirection === 'right') ||
+              (anubisDirection === 'left' && currentDirection === 'down')
+            ) {
+              console.log('Anubis absorbed the laser');
+              // Anubis absorbed the laser
+              path.push({
+                row: y,
+                col: x,
+                entry: cellEntry,
+                exit: ''
+              });
+              setLaserPath([...path]);
+              setTimeout(() => setLaserPath([]), LASER_SPEED * 5);
+            } else {
+              // Anubis is dead, remove it from the board
+              const newBoardState = currentBoardState.map((r) => r.slice());
+              newBoardState[y][x] = null;
+              setBoardState(newBoardState);
+              setLaserPath([]);
+            }
           } else {
             // Piece is dead, remove it from the board
             const newBoardState = currentBoardState.map((r) => r.slice());
@@ -330,11 +368,11 @@ const Game: React.FC = () => {
     console.log('Piece:', pieceType, 'Direction:', incomingDirection, 'Rotation:', rotation);
 
     switch (pieceType) {
-      case 'rpy':
-      case 'spy':
+      case 'red_pyramid':
+      case 'silver_pyramid':
         return getPyramidReflection(rotation, incomingDirection);
-      case 'rsc':
-      case 'ssc':
+      case 'red_scarab':
+      case 'silver_scarab':
         return getScarabReflection(rotation, incomingDirection);
       default:
         break;
@@ -429,7 +467,7 @@ const Game: React.FC = () => {
 
     const [pieceType] = newCellValue.split(',');
 
-    const log = `Rotate ${pieceType}`;
+    const log = `${pieceType} rotated`;
     const fromPosition = { row, col };
     const toPosition = { row, col };
 
@@ -453,7 +491,7 @@ const Game: React.FC = () => {
     animateLaser(currentBoardState);
   }, [gameHistory, currentMove]);
 
-  const availablePieces = Object.keys(Piece);
+  const availablePieces: PieceType[] = Object.keys(Pieces) as PieceType[];
 
   return (
     <Stack>
@@ -537,10 +575,10 @@ const Game: React.FC = () => {
             <DialogTitle>Select a Piece</DialogTitle>
             <DialogContent>
               <Grid container spacing={2}>
-                {availablePieces.map((pieceKey) => (
+                {availablePieces.map((pieceKey: PieceType) => (
                   <Grid item xs={3} key={pieceKey}>
                     <img
-                      src={Piece[pieceKey].image}
+                      src={Pieces[pieceKey].image}
                       width={100}
                       height={100}
                       alt={pieceKey}

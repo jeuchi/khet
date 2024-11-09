@@ -7,6 +7,8 @@ import RedPyramid from './assets/red-pyramid.svg';
 import SilverPyramid from './assets/silver-pyramid.svg';
 import RedScarab from './assets/red-scarab.png';
 import SilverScarab from './assets/silver-scarab.png';
+import RedAnubis from './assets/red-anubis.svg';
+import SilverAnubis from './assets/silver-anubis.svg';
 
 export interface Piece {
   image: string;
@@ -17,13 +19,19 @@ export interface Piece {
   ) => { row: number; col: number }[];
 }
 
-const KingMoveList = (boardState: (string | null)[][], position: { row: number; col: number }) => {
+export type PieceType = 'red_sphinx' | 'red_pharaoh' | 'red_pyramid' | 'red_scarab' | 'red_anubis' | 'silver_sphinx' | 'silver_pharaoh' | 'silver_pyramid' | 'silver_scarab' | 'silver_anubis';
+
+const MoveList = (boardState: (string | null)[][], position: { row: number; col: number }) => {
   const moves: { row: number; col: number }[] = [];
   const directions = [
     { row: -1, col: 0 },
     { row: 1, col: 0 },
     { row: 0, col: -1 },
-    { row: 0, col: 1 }
+    { row: 0, col: 1 },
+    { row: -1, col: -1 },
+    { row: -1, col: 1 },
+    { row: 1, col: -1 },
+    { row: 1, col: 1 },
   ];
   directions.forEach((dir) => {
     const newRow = position.row + dir.row;
@@ -41,43 +49,18 @@ const KingMoveList = (boardState: (string | null)[][], position: { row: number; 
   return moves;
 };
 
-const Piece: { [key: string]: Piece } = {
-  rsp: {
-    image: RedSphinx,
-    moveList: KingMoveList,
-    rotate: true
-  },
-  rph: {
-    image: RedPharaoh,
-    moveList: KingMoveList,
-    rotate: true
-  },
-  rpy: {
-    image: RedPyramid,
-    rotate: true
-  },
-  rsc: {
-    image: RedScarab,
-    rotate: true
-  },
-  ssp: {
-    image: SilverSphix,
-    moveList: KingMoveList,
-    rotate: true
-  },
-  sph: {
-    image: SilverPharaoh,
-    moveList: KingMoveList,
-    rotate: true
-  },
-  spy: {
-    image: SilverPyramid,
-    rotate: true
-  },
-  ssc: {
-    image: SilverScarab,
-    rotate: true
-  }
+export const Pieces: { [key in PieceType]: Piece } = {
+  red_sphinx: { image: RedSphinx, rotate: true, moveList: MoveList },
+  red_pharaoh: { image: RedPharaoh, rotate: true, moveList: MoveList },
+  red_pyramid: { image: RedPyramid, rotate: true, moveList: MoveList },
+  red_scarab: { image: RedScarab, rotate: true, moveList: MoveList },
+  red_anubis: { image: RedAnubis, rotate: true, moveList: MoveList },
+  silver_sphinx: { image: SilverSphix, rotate: true, moveList: MoveList },
+  silver_pharaoh: { image: SilverPharaoh, rotate: true, moveList: MoveList },
+  silver_pyramid: { image: SilverPyramid, rotate: true, moveList: MoveList },
+  silver_scarab: { image: SilverScarab, rotate: true, moveList: MoveList },
+  silver_anubis: { image: SilverAnubis, rotate: true, moveList: MoveList },
+  
 };
 
-export default Piece;
+export default Pieces;
