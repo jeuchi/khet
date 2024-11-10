@@ -84,6 +84,20 @@ const Game: React.FC = () => {
   >([]);
   const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
 
+  const isAnkhSpace = (row: number, col: number) => {
+    if (cols - 1 === col || (row === 0 && col === 1) || (row === rows - 1 && col === 1)) {
+      return true;
+    }
+    return false;
+  };
+
+  const isEyeSpace = (row: number, col: number) => {
+    if (col === 0 || (col === cols - 2 && row === 0) || (col === cols - 2 && row === rows - 1)) {
+      return true;
+    }
+    return false;
+  };
+
   const handleBoardSizeChange = (newRows: number, newCols: number) => {
     if (newRows < 4 || newCols < 4) return;
     if (newRows > 10 || newCols > 10) return;
@@ -182,8 +196,16 @@ const Game: React.FC = () => {
     setRotationAngles(newRotationAngles);
 
     const newBoardState = boardState.map((r) => r.slice());
-    newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
-    newBoardState[fromPosition.row][fromPosition.col] = null;
+
+    if (piece === 'red_scarab' || piece === 'silver_scarab') {
+      // Swap positions with the piece at the target position
+      const targetPiece = newBoardState[toPosition.row][toPosition.col];
+      newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
+      newBoardState[fromPosition.row][fromPosition.col] = targetPiece;
+    } else {
+      newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
+      newBoardState[fromPosition.row][fromPosition.col] = null;
+    }
 
     setBoardState(newBoardState);
     const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
@@ -276,10 +298,16 @@ const Game: React.FC = () => {
       const cellEntry = oppositeDirections[currentDirection];
 
       // Check if laser hits a piece
-      const cell = currentBoardState[y][x];
-      if (cell && cell !== '') {
+      let [piece, pieceDirection] = currentBoardState[y][x]?.split(',') || [];
+      if (pieceDirection === 'undefined') {
+        pieceDirection = 'up';
+      }
+
+      console.log('Piece at', { row: y, col: x }, 'is', piece, 'Direction:', pieceDirection);
+
+      if (piece && piece !== '') {
         // Determine new direction based on piece type
-        const newDirection = handleReflection(cell, currentDirection);
+        const newDirection = handleReflection(piece, pieceDirection, currentDirection);
 
         if (newDirection) {
           // Reflect laser
@@ -294,8 +322,8 @@ const Game: React.FC = () => {
           setTimeout(step, LASER_SPEED);
         } else {
           // Laser is blocked or absorbed, end animation
-          console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', cell);
-          if (cell === 'red_pharaoh' || cell === 'silver_pharaoh') {
+          console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', piece);
+          if (piece === 'red_pharaoh' || piece === 'silver_pharaoh') {
             setGameOver(true);
             path.push({
               row: y,
@@ -304,11 +332,22 @@ const Game: React.FC = () => {
               exit: ''
             });
             setLaserPath([...path]);
-          } else if (cell === 'red_anubis' || cell === 'silver_anubis') {
+          } else if (piece === 'red_sphinx' || piece === 'silver_sphinx') {
+            // Sphinx can't be destroyed by the laser
+            console.log('Sphinx absorbed the laser');
+            path.push({
+              row: y,
+              col: x,
+              entry: cellEntry,
+              exit: ''
+            });
+            setLaserPath([]);
+          } else if (piece === 'red_anubis' || piece === 'silver_anubis') {
             // Check if the anubis is facing the laser. Note that 'up' is the default direction
             // and Anubis piece is looking towards the right. If he's looking towards the laser,
             // the laser will be absorbed otherwise he will die.
-            const anubisDirection = cell.split(',')[1] || 'up';
+            const anubisDirection = pieceDirection;
+            console.log('Anubis direction:', anubisDirection, 'Laser direction:', currentDirection);
             if (
               (anubisDirection === 'up' && currentDirection === 'left') ||
               (anubisDirection === 'right' && currentDirection === 'up') ||
@@ -334,6 +373,7 @@ const Game: React.FC = () => {
             }
           } else {
             // Piece is dead, remove it from the board
+            console.log('Piece is dead, removing it from the board');
             const newBoardState = currentBoardState.map((r) => r.slice());
             newBoardState[y][x] = null;
             setBoardState(newBoardState);
@@ -361,8 +401,11 @@ const Game: React.FC = () => {
     setTimeout(step, LASER_SPEED);
   };
 
-  const handleReflection = (piece: string, incomingDirection: string): string | null => {
-    const [pieceType, direction] = piece.split(',');
+  const handleReflection = (
+    pieceType: string,
+    direction: string,
+    incomingDirection: string
+  ): string | null => {
     const rotation = DIRECTION_TO_ROTATION[direction] || 0;
 
     console.log('Piece:', pieceType, 'Direction:', incomingDirection, 'Rotation:', rotation);
@@ -574,18 +617,36 @@ const Game: React.FC = () => {
           <Dialog open={pieceSelectionOpen} onClose={() => setPieceSelectionOpen(false)}>
             <DialogTitle>Select a Piece</DialogTitle>
             <DialogContent>
-              <Grid container spacing={2}>
-                {availablePieces.map((pieceKey: PieceType) => (
-                  <Grid item xs={3} key={pieceKey}>
-                    <img
-                      src={Pieces[pieceKey].image}
-                      width={100}
-                      height={100}
-                      alt={pieceKey}
-                      onClick={() => handlePieceSelect(pieceKey)}
-                      style={{ cursor: 'pointer', maxWidth: '100%' }}
-                    />
-                  </Grid>
+              <Grid container spacing={2} columns={10}>
+                {['red', 'silver'].map((color) => (
+                  <React.Fragment key={color}>
+                    {availablePieces
+                      .filter((pieceKey: PieceType) => pieceKey.startsWith(color))
+                      .filter((pieceKey: PieceType) => {
+                        if (selectedCell) {
+                          const { row, col } = selectedCell;
+                          if (pieceKey.startsWith('red') && isAnkhSpace(row, col)) {
+                            return false;
+                          }
+                          if (pieceKey.startsWith('silver') && isEyeSpace(row, col)) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      })
+                      .map((pieceKey: PieceType) => (
+                        <Grid item xs={2} key={pieceKey}>
+                          <img
+                            src={Pieces[pieceKey].image}
+                            width={75}
+                            height={75}
+                            alt={pieceKey}
+                            onClick={() => handlePieceSelect(pieceKey)}
+                            style={{ cursor: 'pointer', maxWidth: '100%' }}
+                          />
+                        </Grid>
+                      ))}
+                  </React.Fragment>
                 ))}
               </Grid>
             </DialogContent>

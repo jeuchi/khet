@@ -21,7 +21,7 @@ export interface Piece {
 
 export type PieceType = 'red_sphinx' | 'red_pharaoh' | 'red_pyramid' | 'red_scarab' | 'red_anubis' | 'silver_sphinx' | 'silver_pharaoh' | 'silver_pyramid' | 'silver_scarab' | 'silver_anubis';
 
-const MoveList = (boardState: (string | null)[][], position: { row: number; col: number }) => {
+const NormalMoveList = (boardState: (string | null)[][], position: { row: number; col: number }) => {
   const moves: { row: number; col: number }[] = [];
   const directions = [
     { row: -1, col: 0 },
@@ -49,17 +49,47 @@ const MoveList = (boardState: (string | null)[][], position: { row: number; col:
   return moves;
 };
 
+// The Scarab moves in all directions as well, but it can also swap places with a piece in an adjacent cell.
+const ScarabMoveList = (boardState: (string | null)[][], position: { row: number; col: number }) => {
+  const moves: { row: number; col: number }[] = [];
+  const directions = [
+    { row: -1, col: 0 },
+    { row: 1, col: 0 },
+    { row: 0, col: -1 },
+    { row: 0, col: 1 },
+    { row: -1, col: -1 },
+    { row: -1, col: 1 },
+    { row: 1, col: -1 },
+    { row: 1, col: 1 },
+  ];
+  directions.forEach((dir) => {
+    const newRow = position.row + dir.row;
+    const newCol = position.col + dir.col;
+    const piece = boardState[newRow][newCol]?.split('_')[1];
+    if (
+      newRow >= 0 &&
+      newRow < boardState.length &&
+      newCol >= 0 &&
+      newCol < boardState[0].length &&
+      piece !== 'scarab' && piece !== 'pharaoh' && piece !== 'sphinx'
+    ) {
+      moves.push({ row: newRow, col: newCol });
+    }
+  });
+  return moves;
+};
+
 export const Pieces: { [key in PieceType]: Piece } = {
-  red_sphinx: { image: RedSphinx, rotate: true, moveList: MoveList },
-  red_pharaoh: { image: RedPharaoh, rotate: true, moveList: MoveList },
-  red_pyramid: { image: RedPyramid, rotate: true, moveList: MoveList },
-  red_scarab: { image: RedScarab, rotate: true, moveList: MoveList },
-  red_anubis: { image: RedAnubis, rotate: true, moveList: MoveList },
-  silver_sphinx: { image: SilverSphix, rotate: true, moveList: MoveList },
-  silver_pharaoh: { image: SilverPharaoh, rotate: true, moveList: MoveList },
-  silver_pyramid: { image: SilverPyramid, rotate: true, moveList: MoveList },
-  silver_scarab: { image: SilverScarab, rotate: true, moveList: MoveList },
-  silver_anubis: { image: SilverAnubis, rotate: true, moveList: MoveList },
+  red_sphinx: { image: RedSphinx, rotate: true},
+  red_pharaoh: { image: RedPharaoh, rotate: true, moveList: NormalMoveList },
+  red_pyramid: { image: RedPyramid, rotate: true, moveList: NormalMoveList },
+  red_scarab: { image: RedScarab, rotate: true, moveList: ScarabMoveList },
+  red_anubis: { image: RedAnubis, rotate: true, moveList: NormalMoveList },
+  silver_sphinx: { image: SilverSphix, rotate: true },
+  silver_pharaoh: { image: SilverPharaoh, rotate: true, moveList: NormalMoveList },
+  silver_pyramid: { image: SilverPyramid, rotate: true, moveList: NormalMoveList },
+  silver_scarab: { image: SilverScarab, rotate: true, moveList: ScarabMoveList },
+  silver_anubis: { image: SilverAnubis, rotate: true, moveList: NormalMoveList },
   
 };
 

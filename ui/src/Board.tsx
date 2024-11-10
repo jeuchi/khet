@@ -125,7 +125,17 @@ const Board: React.FC<BoardProps> = ({
     const piece = Pieces[cellValue];
     if (piece && piece.moveList) {
       const moves = piece.moveList(boardState, { row, col });
-      setPossibleMoves(moves);
+      const pieceColor = cellValue.split('_')[0];
+      const filteredMoves = moves.filter((move) => {
+        if (pieceColor === 'red' && isAnkhSpace(move.row, move.col)) {
+          return false;
+        }
+        if (pieceColor === 'silver' && isEyeSpace(move.row, move.col)) {
+          return false;
+        }
+        return true;
+      });
+      setPossibleMoves(filteredMoves);
     } else {
       setPossibleMoves([]);
     }
@@ -171,19 +181,46 @@ const Board: React.FC<BoardProps> = ({
     // Existing game mode logic
     if (cellValue) {
       // There is a piece at this cell
-      const piece = Pieces[cellValue];
-      if (piece && piece.moveList) {
-        // Select the piece and show possible moves
-        setSelectedPiece({ row, col });
-        if (piece.moveList) {
-          const moves = piece.moveList(boardState, { row, col });
-          setPossibleMoves(moves);
+      if (selectedPiece) {
+        // Check if the clicked cell is a possible move
+        const move = possibleMoves.find((move) => move.row === row && move.col === col);
+        if (move) {
+          // Move the piece
+          movePiece(selectedPiece, move);
+          setSelectedPiece(null);
+          setPossibleMoves([]);
         } else {
+          // Deselect if clicking outside possible moves
+          setSelectedPiece(null);
           setPossibleMoves([]);
         }
       } else {
-        setSelectedPiece(null);
-        setPossibleMoves([]);
+        const piece = Pieces[cellValue];
+        if (piece && piece.moveList) {
+          // Select the piece and show possible moves
+          setSelectedPiece({ row, col });
+          if (piece.moveList) {
+            const moves = piece.moveList(boardState, { row, col });
+            const pieceColor = cellValue.split('_')[0];
+            // Filter out moves that land on edges of the board that the piece can't move to
+            // For example, red pieces cant be on the right most column
+            const filteredMoves = moves.filter((move) => {
+              if (pieceColor === 'red' && isAnkhSpace(move.row, move.col)) {
+                return false;
+              }
+              if (pieceColor === 'silver' && isEyeSpace(move.row, move.col)) {
+                return false;
+              }
+              return true;
+            });
+            setPossibleMoves(filteredMoves);
+          } else {
+            setPossibleMoves([]);
+          }
+        } else {
+          setSelectedPiece(null);
+          setPossibleMoves([]);
+        }
       }
     } else {
       // Empty cell
@@ -202,6 +239,24 @@ const Board: React.FC<BoardProps> = ({
         }
       }
     }
+  };
+
+  const isAnkhSpace = (row: number, col: number) => {
+    if (columns - 1 === col || (row === 0 && col === 1) || (row === rows - 1 && col === 1)) {
+      return true;
+    }
+    return false;
+  };
+
+  const isEyeSpace = (row: number, col: number) => {
+    if (
+      col === 0 ||
+      (col === columns - 2 && row === 0) ||
+      (col === columns - 2 && row === rows - 1)
+    ) {
+      return true;
+    }
+    return false;
   };
 
   const handleRemovePiece = (
@@ -260,16 +315,9 @@ const Board: React.FC<BoardProps> = ({
               let canRotate = true;
 
               if (cellValue !== null) {
-                const [pieceStr, direction] = cellValue.split(',').map((part) => part.trim());
+                const [pieceStr, _direction] = cellValue.split(',').map((part) => part.trim());
                 piece = pieceStr as PieceType;
               }
-
-              /*
-              if (piece) {
-                if (isEditable || (piece !== 'ssp' && piece !== 'rsp')) {
-                  canRotate = true;
-                }
-              }*/
 
               let borderRadius = '0';
 
@@ -388,11 +436,9 @@ const Board: React.FC<BoardProps> = ({
                         </>
                       )}
                       {!piece && isEditable && <AddPieceIcon />}
-                      {!piece && isPossibleMove && <MoveHighlight />}
+                      {isPossibleMove && <MoveHighlight />}
 
-                      {(boardState[0].length - 1 === colIndex ||
-                        (rowIndex === 0 && colIndex === 1) ||
-                        (rowIndex === boardState.length - 1 && colIndex === 1)) && (
+                      {isAnkhSpace(rowIndex, colIndex) && (
                         <Sprite
                           src={SilverAnkh}
                           alt="Silver Ankh"
@@ -402,10 +448,7 @@ const Board: React.FC<BoardProps> = ({
                         />
                       )}
 
-                      {(colIndex === 0 ||
-                        (colIndex === boardState[0].length - 2 && rowIndex === 0) ||
-                        (colIndex === boardState[0].length - 2 &&
-                          rowIndex === boardState.length - 1)) && (
+                      {isEyeSpace(rowIndex, colIndex) && (
                         <Sprite
                           src={RedEye}
                           alt="Red Eye"
