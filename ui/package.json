@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "api": "cd ../api/ && flask run --no-debugger",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write \"./src/**/*.+(ts|tsx|json)\"",
