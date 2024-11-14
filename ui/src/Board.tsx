@@ -8,8 +8,9 @@ import AddIcon from '@mui/icons-material/Add';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import {
-  CELL_COLOR_1,
-  CELL_COLOR_2,
+  CELL_COLOR_ANKH,
+  CELL_COLOR_EYE,
+  CELL_COLOR_MAIN,
   MOVE_HIGHLIGHT_COLOR,
   REMOVE_PIECE_COLOR,
   ADD_PIECE_COLOR,
@@ -311,11 +312,12 @@ const Board: React.FC<BoardProps> = ({
               // Split the cellValue by comma
               let piece: PieceType | null = null;
               let direction = 'up';
+              let pieceStr = '';
 
               let canRotate = true;
 
               if (cellValue !== null) {
-                const [pieceStr, _direction] = cellValue.split(',').map((part) => part.trim());
+                [pieceStr, direction] = cellValue.split(',').map((part) => part.trim());
                 piece = pieceStr as PieceType;
               }
 
@@ -368,9 +370,11 @@ const Board: React.FC<BoardProps> = ({
                           ? LAST_MOVE_FROM_COLOR
                           : lastMove?.to.row === rowIndex && lastMove?.to.col === colIndex
                           ? LAST_MOVE_TO_COLOR
-                          : rowIndex % 2 === colIndex % 2
-                          ? CELL_COLOR_1
-                          : CELL_COLOR_2
+                          : isAnkhSpace(rowIndex, colIndex)
+                          ? CELL_COLOR_ANKH
+                          : isEyeSpace(rowIndex, colIndex)
+                          ? CELL_COLOR_EYE
+                          : CELL_COLOR_MAIN
                     }}
                     onClick={() => handleCellClick(rowIndex, colIndex, piece)}
                     onDragOver={handleDragOver}
@@ -481,7 +485,7 @@ const Board: React.FC<BoardProps> = ({
                             x2={50}
                             y2={50}
                             stroke="red"
-                            strokeWidth="2"
+                            strokeWidth="4"
                             strokeLinecap="round"
                           />
                           <line

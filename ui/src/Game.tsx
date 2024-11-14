@@ -32,13 +32,6 @@ interface GameHistory {
   rotationAngles?: { [key: string]: number };
 }
 
-const INITIAL_BOARD = [
-  ['red_sphinx,down', 'red_anubis', 'red_pharaoh', ''],
-  ['', '', 'silver_pyramid', ''],
-  ['', '', '', ''],
-  ['', 'silver_pharaoh', 'silver_anubis', 'silver_sphinx']
-];
-
 // Direction vectors
 const directions: { [key: string]: { dx: number; dy: number } } = {
   up: { dx: 0, dy: -1 },
@@ -67,8 +60,8 @@ const Game: React.FC = () => {
     to: { row: number; col: number };
   } | null>(null);
   const [gameHistory, setGameHistory] = useState<GameHistory[]>([]);
-  const [boardState, setBoardState] = useState<(string | null)[][]>(INITIAL_BOARD);
-  const [initialBoardState, setInitialBoardState] = useState<(string | null)[][]>(INITIAL_BOARD);
+  const [boardState, setBoardState] = useState<(string | null)[][]>([]);
+  const [initialBoardState, setInitialBoardState] = useState<(string | null)[][]>([]);
   const [pieceSelectionOpen, setPieceSelectionOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{
     row: number;
@@ -102,9 +95,6 @@ const Game: React.FC = () => {
     if (newRows < 4 || newCols < 4) return;
     if (newRows > 10 || newCols > 10) return;
 
-    setRows(newRows);
-    setCols(newCols);
-    // Fill the new board with empty strings except the rl in top left and bl in bottom right
     const newBoardState = Array.from({ length: newRows }, () =>
       Array.from({ length: newCols }, () => '')
     );
@@ -299,7 +289,7 @@ const Game: React.FC = () => {
 
       // Check if laser hits a piece
       let [piece, pieceDirection] = currentBoardState[y][x]?.split(',') || [];
-      if (pieceDirection === 'undefined') {
+      if (pieceDirection === 'undefined' || !pieceDirection) {
         pieceDirection = 'up';
       }
 
@@ -534,7 +524,33 @@ const Game: React.FC = () => {
     animateLaser(currentBoardState);
   }, [gameHistory, currentMove]);
 
+  useEffect(() => {
+    if (boardState.length === 0) return;
+    setRows(boardState.length);
+    setCols(boardState[0].length);
+  }, [boardState]);
+
   const availablePieces: PieceType[] = Object.keys(Pieces) as PieceType[];
+
+  const saveGameBoard = async (blob) => {
+    const a = document.createElement('a');
+    a.download = 'my-file.txt';
+    a.href = URL.createObjectURL(blob);
+    a.addEventListener('click', (e) => {
+      setTimeout(() => URL.revokeObjectURL(a.href), 30 * 1000);
+    });
+    a.click();
+  };
+
+  const loadGameBoard = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result as string;
+      const newBoardState = JSON.parse(content);
+      setBoardState(newBoardState);
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <Stack>
@@ -606,6 +622,31 @@ const Game: React.FC = () => {
               <Button
                 variant="contained"
                 color="primary"
+                onClick={() =>
+                  saveGameBoard(new Blob([JSON.stringify(boardState)], { type: 'text/plain' }))
+                }
+                style={{ marginTop: 15 }}
+              >
+                Save Game Board
+              </Button>
+
+              <Button
+                variant="contained"
+                color="primary"
+                component="label"
+                style={{ marginTop: 15 }}
+              >
+                Load Game Board
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) => e.target.files && loadGameBoard(e.target.files[0])}
+                />
+              </Button>
+
+              <Button
+                variant="contained"
+                color="secondary"
                 onClick={startGame}
                 style={{ marginTop: 15 }}
               >
