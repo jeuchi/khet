@@ -29,6 +29,7 @@ function GameHistory({
                 hover
                 selected={currentMove === index}
                 onClick={() => {
+                  if (index === currentMove) return;
                   setCurrentMove(index);
                   setLastMove({ from: history.from, to: history.to });
                   setBoardState(history.boardState);

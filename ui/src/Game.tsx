@@ -48,6 +48,13 @@ const oppositeDirections: { [key: string]: string } = {
   left: 'right'
 };
 
+const INITIAL_BOARD_STATE = [
+  ['', '', '', ''],
+  ['', '', '', ''],
+  ['', '', '', ''],
+  ['', '', '', '']
+];
+
 const Game: React.FC = () => {
   const [editMode, setEditMode] = useState(true);
   const [gameOver, setGameOver] = useState(false);
@@ -60,8 +67,9 @@ const Game: React.FC = () => {
     to: { row: number; col: number };
   } | null>(null);
   const [gameHistory, setGameHistory] = useState<GameHistory[]>([]);
-  const [boardState, setBoardState] = useState<(string | null)[][]>([]);
-  const [initialBoardState, setInitialBoardState] = useState<(string | null)[][]>([]);
+  const [boardState, setBoardState] = useState<(string | null)[][]>(INITIAL_BOARD_STATE);
+  const [initialBoardState, setInitialBoardState] =
+    useState<(string | null)[][]>(INITIAL_BOARD_STATE);
   const [pieceSelectionOpen, setPieceSelectionOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{
     row: number;
