@@ -22,15 +22,6 @@ class KhetGame:
             self.board.display()
             self.board.make_move(self.turn)
             self.switch_turn()
-
-    def get_all_possible_moves(self):
-        possible_moves = []
-        board = self.board_history[-1]
-        for piece in board.get_list_of_pieces():
-            if piece.color == self.turn:
-                for move in board.list_possible_moves(piece):
-                    possible_moves.append((piece, move))
-        return possible_moves
     
 
     def make_move_pos(self, position, action):
@@ -72,78 +63,19 @@ class KhetGame:
         else:   
             print("Silver wins!")
 
-    def print_moves(self, moves):
-        for move in moves:
-            self.print_move(move)
-
-    def print_move(self, move):
-        piece, action = move
-        if piece is not None:
-            print(f"{piece.color} {piece} at {piece.position} -> {action}") 
-        else:
-            print(f"PASS")
-
     def get_current_board(self):
         return self.board_history[-1]
     
-def parse_board_data(board_data):
-    n = len(board_data)
-    m = len(board_data[0])
-    print(f"Board shape: {m}x{n}")
+def print_moves(moves):
+    for move in moves:
+        self.print_move(move)
 
-    list_of_pieces = []
-    for i in range(n):
-        for j in range(m):
-            piece_str = board_data[i][j]
-            x = j #translate from front end coordinates to back end coordinates
-            y = n - i - 1
-            
-            parsed_piece = parse_piece_str(piece_str)
-            if parsed_piece is not None:
-                color, piece_str, orientation = parsed_piece
-
-                piece_obj = create_piece_from_str(color, piece_str, (x, y), orientation)
-                if piece_obj is None:
-                    print(f"Error: Could not create piece from string '{piece_str}' with color '{color}', piece '{piece}', coordinates ({x},{y}), and orientation '{orientation}'")
-
-                list_of_pieces.append(piece_obj)
-
-
-    #for piece in list_of_pieces:
-        #print(f"{piece.color} {piece} at {piece.position}")
-    game = KhetGame(m=m, n=n, list_of_pieces=list_of_pieces)
-    initial_board = game.board_history[0]
-    initial_board.display_board()
-
-    return 'Solved!'
-
-def parse_piece_str(piece_str):
-    if piece_str == " ":
-        return None
-    color, piece_and_orientation = piece_str.split("_")
-
-    if color == "red":
-        color = "Red"
-    elif color == "silver":
-        color = "Silver"
-
-    if "," in piece_and_orientation:
-        piece, orientation_str = piece_and_orientation.split(",")
-        if orientation_str == "up":
-            orientation = 0
-        elif orientation_str == "right":
-            orientation = 1
-        elif orientation_str == "down":
-            orientation = 2
-        elif orientation_str == "left":
-            orientation = 3
+def print_move(move):
+    piece, action = move
+    if piece is not None:
+        print(f"{piece.color} {piece} at {piece.position} -> {action}") 
     else:
-        piece = piece_and_orientation
-        orientation = 0  # Default orientation if not specified
-
-    return (color, piece, orientation)
-    
-
+        print(f"PASS")
 
 ## list of starting pieces
 list_of_starting_pieces = []
@@ -160,20 +92,13 @@ list_of_starting_pieces.append(Anubis("Silver", (6, 6), 3))
 
 # Example usage
 if __name__ == "__main__":
-    game = KhetGame(list_of_starting_pieces)
+    file_path = "C:\\Users\\Austin\\Documents\\GitHub\\khet\\boards\\test-1.txt"
+    with open(file_path, 'r') as file:
+        board_data = file.read()
+    print(board_data)
+    board = parse_board_data(board_data)
 
-    game.make_move_pos((4,4), action.WEST)
-    game.make_move((None, action.PASS))
-    game.make_move_pos((6,6), action.EAST)
-    game.make_move((None, action.PASS))
-    game.make_move_pos((7,6), action.ROTATE_CW)
-    game.make_move((None, action.PASS))
-    game.make_move_pos((9,4), action.WEST)
-    game.make_move_pos((9,6), action.WEST)
-    #game.make_move_pos((7,2), action.WEST)
-    #game.make_move((None, action.PASS))
-    #game.make_move_pos((6,2), action.WEST)
+    #solution = solve_single_agent(board, "Silver")
+    #print_moves(solution)
 
-    board_to_display = game.board_history[-1]
-    board_to_display.display_board()
-
+    #board.display_board()

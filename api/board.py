@@ -1,6 +1,31 @@
-from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, surface
+from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, surface, parse_piece_str, create_piece_from_str
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+def parse_board_data(board_data):
+    n = len(board_data)
+    m = len(board_data[0])
+    print(f"Board shape: {m}x{n}")
+
+    list_of_pieces = []
+    for i in range(n):
+        for j in range(m):
+            piece_str = board_data[i][j]
+            x = j #translate from front end coordinates to back end coordinates
+            y = n - i - 1
+            
+            parsed_piece = parse_piece_str(piece_str)
+            if parsed_piece is not None:
+                color, piece_str, orientation = parsed_piece
+
+                piece_obj = create_piece_from_str(color, piece_str, (x, y), orientation)
+                if piece_obj is None:
+                    print(f"Error: Could not create piece from string '{piece_str}' with color '{color}', piece '{piece}', coordinates ({x},{y}), and orientation '{orientation}'")
+
+                list_of_pieces.append(piece_obj)
+
+    board = Board(m=m, n=n, list_of_pieces=list_of_pieces)
+    return board
 
 class Board:
     def __init__(self, m=10, n=8, list_of_pieces=None):
@@ -30,8 +55,11 @@ class Board:
         for row in self.grid:
             print(" ".join([str(piece) if piece else '.' for piece in row]))
     
-    def is_ankh_destroyed(self):
-        # Check if the Pharaoh of either side is destroyed
+    def is_pharoh_destroyed(self, color):
+        for row in self.grid:
+            for piece in row:
+                if isinstance(piece, Pharaoh) and piece.color == color:
+                    return True
         return False
     
     def fire_laser(self, color):
@@ -41,7 +69,7 @@ class Board:
         
         x, y = Sphynx.get_position()
         laser_direction = Sphynx.get_laser_direction()
-        print(f"Firing laser from Sphinx at ({x}, {y}) in direction {laser_direction}")
+        #print(f"Firing laser from Sphinx at ({x}, {y}) in direction {laser_direction}")
 
         laser_traveling = True
 
@@ -56,12 +84,12 @@ class Board:
             piece = self.get_grid_position((x, y))
             if piece is not None:
                 surface_hit = piece.get_surface_hit(laser_direction)
-                print(f"Surface hit: {surface_hit} on {piece} at ({x}, {y})")
+                #print(f"Surface hit: {surface_hit} on {piece} at ({x}, {y})")
                 if surface_hit == surface.BLOCKER or surface_hit == surface.EMIT_LASER:
                     return None #TODO placeholder
                 elif surface_hit == surface.REFLECT_CW or surface_hit == surface.REFLECT_CCW:
                     laser_direction = piece.reflect_laser(laser_direction)
-                    print(f"Reflecting to {laser_direction}")
+                    #print(f"Reflecting to {laser_direction}")
                 else: # surface_hit should be vunerable
                     laser_traveling = False
         
@@ -190,3 +218,11 @@ class Board:
             new_board.set_grid_position(piece_in_next_space, old_position)
             
         return new_board
+    
+    def get_all_possible_moves(self, color):
+        possible_moves = []
+        for piece in self.get_list_of_pieces():
+            if piece.color == color:
+                for move in self.list_possible_moves(piece):
+                    possible_moves.append((piece, move))
+        return possible_moves

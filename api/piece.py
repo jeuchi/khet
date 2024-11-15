@@ -15,6 +15,32 @@ def create_piece_from_str(color, piece_str, position, orientation):
             return Sphynx(color, position, orientation)
         else:
             raise ValueError(f"Unknown piece type: {piece_str}")
+        
+def parse_piece_str(piece_str):
+    if piece_str == " ":
+        return None
+    color, piece_and_orientation = piece_str.split("_")
+
+    if color == "red":
+        color = "Red"
+    elif color == "silver":
+        color = "Silver"
+
+    if "," in piece_and_orientation:
+        piece, orientation_str = piece_and_orientation.split(",")
+        if orientation_str == "up":
+            orientation = 0
+        elif orientation_str == "right":
+            orientation = 1
+        elif orientation_str == "down":
+            orientation = 2
+        elif orientation_str == "left":
+            orientation = 3
+    else:
+        piece = piece_and_orientation
+        orientation = 0  # Default orientation if not specified
+
+    return (color, piece, orientation)
 
 class Piece:
     def __init__(self, color, position, orientation=0):
