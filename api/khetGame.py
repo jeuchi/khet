@@ -1,5 +1,7 @@
 from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, create_piece_from_str
-from board import Board
+from board import Board, parse_board_data, print_moves
+from solver import solve_single_agent
+import json
 
 class KhetGame:
     def __init__(self, m=10, n=8, list_of_pieces=None):
@@ -65,17 +67,6 @@ class KhetGame:
 
     def get_current_board(self):
         return self.board_history[-1]
-    
-def print_moves(moves):
-    for move in moves:
-        self.print_move(move)
-
-def print_move(move):
-    piece, action = move
-    if piece is not None:
-        print(f"{piece.color} {piece} at {piece.position} -> {action}") 
-    else:
-        print(f"PASS")
 
 ## list of starting pieces
 list_of_starting_pieces = []
@@ -92,13 +83,13 @@ list_of_starting_pieces.append(Anubis("Silver", (6, 6), 3))
 
 # Example usage
 if __name__ == "__main__":
-    file_path = "C:\\Users\\Austin\\Documents\\GitHub\\khet\\boards\\test-1.txt"
-    with open(file_path, 'r') as file:
-        board_data = file.read()
-    print(board_data)
+    file_path = "C:\\Users\\austi\\Documents\\GitHub\\khet\\boards\\test_0.txt"
+    board_data_str = open(file_path)
+    board_data=json.load(board_data_str)
+
     board = parse_board_data(board_data)
 
-    #solution = solve_single_agent(board, "Silver")
-    #print_moves(solution)
+    solution = solve_single_agent(board, "Silver")
+    print(f"Winning moves: {solution}")
 
-    #board.display_board()
+    board.display_board()

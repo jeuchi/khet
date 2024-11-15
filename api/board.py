@@ -5,7 +5,7 @@ import matplotlib.patches as patches
 def parse_board_data(board_data):
     n = len(board_data)
     m = len(board_data[0])
-    print(f"Board shape: {m}x{n}")
+    #print(f"Board shape: {m}x{n}")
 
     list_of_pieces = []
     for i in range(n):
@@ -26,6 +26,17 @@ def parse_board_data(board_data):
 
     board = Board(m=m, n=n, list_of_pieces=list_of_pieces)
     return board
+
+def print_moves(moves):
+    for move in moves:
+        print_move(move)
+
+def print_move(move):
+    piece, action = move
+    if piece is not None:
+        print(f"{piece.color} {piece} at {piece.position} -> {action}") 
+    else:
+        print(f"PASS")
 
 class Board:
     def __init__(self, m=10, n=8, list_of_pieces=None):
@@ -59,8 +70,8 @@ class Board:
         for row in self.grid:
             for piece in row:
                 if isinstance(piece, Pharaoh) and piece.color == color:
-                    return True
-        return False
+                    return False
+        return True
     
     def fire_laser(self, color):
         Sphynx = self.get_sphynx(color)
@@ -191,11 +202,15 @@ class Board:
         return possible_moves
 
     #assumes move is allowed
-    def make_move(self, move):
-        if self.check_move(move) == False:
+    def make_move(self, move, check_allowed=True):
+        if check_allowed == True and self.check_move(move) == False:
+            print_move(move)
+            self.display_board()
             raise Exception("Invalid move")
-        piece, action = move
+        piece_old, action = move
         new_board = self.deepcopy()
+        piece = new_board.get_grid_position(piece_old.position)
+        
 
         if action == action.PASS and piece == None:
             return new_board

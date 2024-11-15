@@ -17,7 +17,7 @@ def create_piece_from_str(color, piece_str, position, orientation):
             raise ValueError(f"Unknown piece type: {piece_str}")
         
 def parse_piece_str(piece_str):
-    if piece_str == " ":
+    if piece_str == " " or piece_str == "" or piece_str == None:
         return None
     color, piece_and_orientation = piece_str.split("_")
 
