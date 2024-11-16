@@ -51,6 +51,14 @@ class Piece:
     def __str__(self):
         return self.symbol
     
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Piece):
+            return False
+        return (self.color == value.color and
+            self.position == value.position and
+            self.orientation == value.orientation and
+            self.symbol == value.symbol)
+    
     def deepcopy(self):
         new_piece = self.__class__(self.color, self.position, self.orientation)
         return new_piece

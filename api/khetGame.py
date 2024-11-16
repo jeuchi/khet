@@ -2,6 +2,7 @@ from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, create_piece
 from board import Board, parse_board_data, print_moves
 from solver import solve_single_agent
 import json
+from pathlib import Path
 
 class KhetGame:
     def __init__(self, m=10, n=8, list_of_pieces=None):
@@ -68,28 +69,16 @@ class KhetGame:
     def get_current_board(self):
         return self.board_history[-1]
 
-## list of starting pieces
-list_of_starting_pieces = []
-list_of_starting_pieces.append(Sphynx("Silver", (9, 0), 0))
-list_of_starting_pieces.append(Sphynx("Red", (0, 7), 2))
-list_of_starting_pieces.append(Pyramid("Silver", (9, 3), 2))
-list_of_starting_pieces.append(Pyramid("Red", (0, 4), 0))
-list_of_starting_pieces.append(Pharaoh("Silver", (9, 4)))
-list_of_starting_pieces.append(Pharaoh("Red", (0, 0)))
-list_of_starting_pieces.append(Scarab("Silver", (4, 4), 1))
-list_of_starting_pieces.append(Pyramid("Red", (3, 6), 1))
-list_of_starting_pieces.append(Scarab("Red", (9, 6), 0))
-list_of_starting_pieces.append(Anubis("Silver", (6, 6), 3))
-
 # Example usage
 if __name__ == "__main__":
-    file_path = "C:\\Users\\austi\\Documents\\GitHub\\khet\\boards\\test_0.txt"
-    board_data_str = open(file_path)
+    data_folder = Path("boards/")
+    file = data_folder / "test-0.txt"
+    board_data_str = open(file)
     board_data=json.load(board_data_str)
 
     board = parse_board_data(board_data)
-
-    solution = solve_single_agent(board, "Silver")
-    print(f"Winning moves: {solution}")
-
     board.display_board()
+    solution = solve_single_agent(board, "Silver")
+    print_moves(solution)
+
+    #board.display_board()

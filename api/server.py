@@ -18,5 +18,4 @@ def solve():
         piece, action = move
         move_str = f"{piece.color} {piece} at {piece.position} -> {action}"
         solution_str += move_str + "\n"
-    print("solution found")
     return solution_str

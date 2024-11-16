@@ -17,7 +17,10 @@ def parse_board_data(board_data):
             parsed_piece = parse_piece_str(piece_str)
             if parsed_piece is not None:
                 color, piece_str, orientation = parsed_piece
-
+                if piece_str == "pyramid":
+                    orientation = orientation+2
+                elif piece_str == "anubis":
+                    orientation = orientation+1
                 piece_obj = create_piece_from_str(color, piece_str, (x, y), orientation)
                 if piece_obj is None:
                     print(f"Error: Could not create piece from string '{piece_str}' with color '{color}', piece '{piece}', coordinates ({x},{y}), and orientation '{orientation}'")
@@ -53,6 +56,15 @@ class Board:
                 grid[y][x] = current_piece
 
         return grid
+    
+    def __eq__(self, other):
+        if self.m != other.m or self.n != other.n:
+            return False
+        for i in range(self.m):
+            for j in range(self.n):
+                if self.grid[i][j] != other.grid[i][j]:
+                    return False
+        return True
     
     def deepcopy(self):
         new_list_of_pieces = []
@@ -228,7 +240,7 @@ class Board:
             new_board.get_grid_position(new_position).rotate_ccw()
         else:
             #swap pieces in the positions. If the next space is none then the old space will be none
-            piece_in_next_space = self.get_grid_position(new_position)
+            piece_in_next_space = new_board.get_grid_position(new_position)
             new_board.set_grid_position(piece, new_position)
             new_board.set_grid_position(piece_in_next_space, old_position)
             

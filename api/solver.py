@@ -12,11 +12,15 @@ def solve_single_agent(starting_board, player_color):
 
     winning_moves = deque()
     current_node = winning_node
+    
     while current_node.parent is not None:
         winning_moves.appendleft(current_node.move)
         current_node = current_node.parent
 
     winning_moves_list = [*winning_moves]
+    winning_node.board.display_board()
+    num_visited = TreeNode.num_nodes_made()
+    print(f"Numer of visited nodes: {num_visited}")
     return winning_moves_list
 
     
@@ -39,10 +43,10 @@ def find_winning_node_single_agent(root, player_color):
 
         for move in possible_moves:
             child_board = current_node.board.make_move(move, check_allowed=True)
-            #child_board.display_board()
 
             piece_destroyed = child_board.fire_laser(player_color)
-            print(piece_destroyed)
+            #if TreeNode.is_visited(child_board):
+                #continue
             child_node = TreeNode(child_board, current_node, move)
             if isinstance(piece_destroyed, Pharaoh) and piece_destroyed.color == opponent_color:
                 return child_node
@@ -50,13 +54,34 @@ def find_winning_node_single_agent(root, player_color):
             queue.append(child_node)
 
 class TreeNode:
+    visited_boards = []
+    nodes_made = 0
+
     def __init__(self, board, parent=None, move=None):
         self.board = board
         self.parent = parent
         self.children = []
         self.move = move
+        TreeNode.nodes_made += 1  # Increment the counter when a node is created
 
     def add_child(self, child):
         self.children.append(child)
+
+    @classmethod
+    def add_visited_board(cls, board):
+        cls.visited_boards.append(board)
+
+    @classmethod
+    def is_visited(cls, board):
+        return board in cls.visited_boards
+    
+    @classmethod
+    def num_visited(cls):
+        return len(cls.visited_boards)
+
+    @classmethod
+    def num_nodes_made(cls):
+        return cls.nodes_made
+    
 
 
