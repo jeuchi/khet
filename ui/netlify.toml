@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/api/solve"
+  to = "https://jeuchi.pythonanywhere.com/api/solve"
+  status = 200
+  force = false
