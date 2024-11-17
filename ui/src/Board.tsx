@@ -20,6 +20,7 @@ import {
 } from './constants';
 import SilverAnkh from './assets/silver-ankh.svg';
 import RedEye from './assets/red-eye.svg';
+import { Game } from './Game';
 
 const Cell = styled('div')({
   position: 'relative',
@@ -75,29 +76,19 @@ const CellLabel = styled('div')({
 });
 
 interface BoardProps {
-  boardState: (string | null)[][];
+  game: Game;
   onMovePiece: (from: { row: number; col: number }, to: { row: number; col: number }) => void;
-  isEditable?: boolean;
   onCellClick?: (row: number, col: number) => void;
   onRemovePiece?: (row: number, col: number) => void;
-  lastMove?: { from: { row: number; col: number }; to: { row: number; col: number } } | null;
-  laserPath?: { row: number; col: number; entry: string; exit: string }[];
   onRotatePiece: (row: number, col: number, direction: string) => void;
-  rotationAngles: { [key: string]: number };
-  onRotationAnglesChange: (rotationAngles: { [key: string]: number }) => void;
 }
 
 const Board: React.FC<BoardProps> = ({
-  boardState,
+  game,
   onMovePiece,
-  isEditable = false,
   onCellClick,
   onRemovePiece,
-  lastMove,
-  laserPath = [],
-  onRotatePiece,
-  rotationAngles,
-  onRotationAnglesChange
+  onRotatePiece
 }) => {
   const [selectedPiece, setSelectedPiece] = useState<{
     row: number;
@@ -105,8 +96,8 @@ const Board: React.FC<BoardProps> = ({
   } | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<{ row: number; col: number }[]>([]);
 
-  const rows = boardState.length;
-  const columns = boardState[0]?.length || 0;
+  const rows = game.boardState.length;
+  const columns = game.boardState[0]?.length || 0;
 
   // Generate column labels (a-h) and row labels (8-1)
   const columnLabels = Array.from({ length: columns }, (_, i) =>
@@ -120,12 +111,12 @@ const Board: React.FC<BoardProps> = ({
     col: number,
     cellValue: PieceType
   ) => {
-    if (isEditable) return; // Disable dragging in edit mode
+    if (game.editMode || game.gameOver) return;
     e.dataTransfer.setData('text/plain', JSON.stringify({ row, col }));
     setSelectedPiece({ row, col });
     const piece = Pieces[cellValue];
     if (piece && piece.moveList) {
-      const moves = piece.moveList(boardState, { row, col });
+      const moves = piece.moveList(game.boardState, { row, col });
       const pieceColor = cellValue.split('_')[0];
       const filteredMoves = moves.filter((move) => {
         if (pieceColor === 'red' && isAnkhSpace(move.row, move.col)) {
@@ -143,12 +134,12 @@ const Board: React.FC<BoardProps> = ({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (isEditable) return;
+    if (game.editMode || game.gameOver) return;
     e.preventDefault();
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, row: number, col: number) => {
-    if (isEditable) return;
+    if (game.editMode || game.gameOver) return;
     e.preventDefault();
     const data = e.dataTransfer.getData('text/plain');
     const fromPosition = JSON.parse(data);
@@ -161,13 +152,13 @@ const Board: React.FC<BoardProps> = ({
   };
 
   const handleDragEnd = () => {
-    if (isEditable) return;
+    if (game.editMode || game.gameOver) return;
     setSelectedPiece(null);
     setPossibleMoves([]);
   };
 
   const handleCellClick = (row: number, col: number, cellValue: PieceType | null) => {
-    if (isEditable) {
+    if (game.editMode) {
       if (!cellValue && onCellClick) {
         // Empty cell, open piece selection dialog
         onCellClick(row, col);
@@ -175,7 +166,7 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    if (laserPath.length > 0) {
+    if (game.laserAnimating || game.gameOver) {
       return;
     }
 
@@ -201,7 +192,7 @@ const Board: React.FC<BoardProps> = ({
           // Select the piece and show possible moves
           setSelectedPiece({ row, col });
           if (piece.moveList) {
-            const moves = piece.moveList(boardState, { row, col });
+            const moves = piece.moveList(game.boardState, { row, col });
             const pieceColor = cellValue.split('_')[0];
             // Filter out moves that land on edges of the board that the piece can't move to
             // For example, red pieces cant be on the right most column
@@ -272,7 +263,7 @@ const Board: React.FC<BoardProps> = ({
   };
 
   const movePiece = (from: { row: number; col: number }, to: { row: number; col: number }) => {
-    if (!isEditable) {
+    if (!game.editMode) {
       onMovePiece(from, to);
     }
   };
@@ -294,6 +285,7 @@ const Board: React.FC<BoardProps> = ({
   };
 
   const handleRotatePiece = (row: number, col: number, rotationDirection: string) => {
+    if (game.gameOver) return;
     onRotatePiece(row, col, rotationDirection);
   };
 
@@ -301,13 +293,13 @@ const Board: React.FC<BoardProps> = ({
     // Clear selected piece and possible moves when board state changes
     setSelectedPiece(null);
     setPossibleMoves([]);
-  }, [boardState]);
+  }, [game.boardState]);
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center" width="100%">
-      <Box width="100vw" maxWidth="600px">
+      <Box width="100vw" maxWidth="800px">
         <Grid container spacing={0} columns={columns}>
-          {boardState.map((row, rowIndex) =>
+          {game.boardState.map((row, rowIndex) =>
             row.map((cellValue, colIndex) => {
               // Split the cellValue by comma
               let piece: PieceType | null = null;
@@ -323,7 +315,7 @@ const Board: React.FC<BoardProps> = ({
 
               let borderRadius = '0';
 
-              const laserSegment = laserPath.find(
+              const laserSegment = game.laserPath.find(
                 (pos) => pos.row === rowIndex && pos.col === colIndex
               );
 
@@ -343,15 +335,10 @@ const Board: React.FC<BoardProps> = ({
 
               // Get rotation angle from state or default
               const cellKey = `${rowIndex}-${colIndex}`;
-              let rotation = rotationAngles[cellKey];
+              let rotation = game.rotationAngles[cellKey];
 
               if (rotation === undefined) {
                 rotation = DIRECTION_TO_ROTATION[direction] || 0;
-                // Initialize the rotation angle in state
-                onRotationAnglesChange({
-                  ...rotationAngles,
-                  [cellKey]: rotation
-                });
               }
 
               return (
@@ -359,16 +346,16 @@ const Board: React.FC<BoardProps> = ({
                   <Cell
                     style={{
                       cursor:
-                        !piece && isEditable
+                        !piece && game.editMode
                           ? 'pointer'
-                          : piece && !isEditable
+                          : piece && !game.editMode
                           ? 'grab'
                           : 'default',
                       borderRadius,
                       backgroundColor:
-                        lastMove?.from.row === rowIndex && lastMove?.from.col === colIndex
+                        game.lastMove?.from.row === rowIndex && game.lastMove?.from.col === colIndex
                           ? LAST_MOVE_FROM_COLOR
-                          : lastMove?.to.row === rowIndex && lastMove?.to.col === colIndex
+                          : game.lastMove?.to.row === rowIndex && game.lastMove?.to.col === colIndex
                           ? LAST_MOVE_TO_COLOR
                           : isAnkhSpace(rowIndex, colIndex)
                           ? CELL_COLOR_ANKH
@@ -397,7 +384,7 @@ const Board: React.FC<BoardProps> = ({
                           <Sprite
                             src={Pieces[piece].image}
                             alt={`Piece at ${rowIndex},${colIndex}`}
-                            draggable={!isEditable && laserPath.length === 0}
+                            draggable={!game.editMode && game.laserAnimating}
                             onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
                             onDragEnd={handleDragEnd}
                             sx={{
@@ -408,7 +395,7 @@ const Board: React.FC<BoardProps> = ({
                               }`
                             }}
                           />
-                          {isEditable && (
+                          {game.editMode && (
                             <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
                           )}
 
@@ -439,7 +426,7 @@ const Board: React.FC<BoardProps> = ({
                           )}
                         </>
                       )}
-                      {!piece && isEditable && <AddPieceIcon />}
+                      {!piece && game.editMode && <AddPieceIcon />}
                       {isPossibleMove && <MoveHighlight />}
 
                       {isAnkhSpace(rowIndex, colIndex) && (

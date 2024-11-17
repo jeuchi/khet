@@ -11,7 +11,8 @@ import {
   Typography,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  Container
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -20,16 +21,48 @@ import LinkOff from '@mui/icons-material/LinkOff';
 import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
+import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
+import BuildingBlocks from './assets/building-blocks.mp4';
 
-interface GameHistory {
+export interface GameHistory {
   boardState: (string | null)[][];
   from: { row: number; col: number };
   to: { row: number; col: number };
   move: string;
-  rotationAngles?: { [key: string]: number };
+  rotationAngles: { [key: string]: number };
+}
+
+export interface Game {
+  initialBoardState: (string | null)[][];
+  boardState: (string | null)[][];
+  gameHistory: GameHistory[];
+  rotationAngles: { [key: string]: number };
+  currentMove: number;
+  lastMove: {
+    from: { row: number; col: number };
+    to: { row: number; col: number };
+  } | null;
+  gameOver: boolean;
+  editMode: boolean;
+  pieceSelectionOpen: boolean;
+  selectedCell: {
+    row: number;
+    col: number;
+  } | null;
+  rows: number;
+  cols: number;
+  linkOn: boolean;
+  isSolving: boolean;
+  laserPath: {
+    row: number;
+    col: number;
+    entry: string;
+    exit: string;
+  }[];
+  laserAnimating: boolean;
 }
 
 // Direction vectors
@@ -56,44 +89,38 @@ const INITIAL_BOARD_STATE = [
 ];
 
 const Game: React.FC = () => {
-  const [editMode, setEditMode] = useState(true);
-  const [gameOver, setGameOver] = useState(false);
-  const [linkOn, setLinkOn] = useState(true);
-  const [rows, setRows] = useState(4);
-  const [cols, setCols] = useState(4);
-  const [currentMove, setCurrentMove] = useState<number>(0);
-  const [lastMove, setLastMove] = useState<{
-    from: { row: number; col: number };
-    to: { row: number; col: number };
-  } | null>(null);
-  const [gameHistory, setGameHistory] = useState<GameHistory[]>([]);
-  const [boardState, setBoardState] = useState<(string | null)[][]>(INITIAL_BOARD_STATE);
-  const [initialBoardState, setInitialBoardState] =
-    useState<(string | null)[][]>(INITIAL_BOARD_STATE);
-  const [pieceSelectionOpen, setPieceSelectionOpen] = useState(false);
-  const [selectedCell, setSelectedCell] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
-  const [laserPath, setLaserPath] = useState<
-    {
-      row: number;
-      col: number;
-      entry: string;
-      exit: string;
-    }[]
-  >([]);
-  const [rotationAngles, setRotationAngles] = useState<{ [key: string]: number }>({});
+  const [game, setGame] = useState<Game>({
+    initialBoardState: INITIAL_BOARD_STATE,
+    boardState: INITIAL_BOARD_STATE,
+    gameHistory: [],
+    rotationAngles: {},
+    currentMove: 0,
+    lastMove: null,
+    gameOver: false,
+    editMode: true,
+    pieceSelectionOpen: false,
+    selectedCell: null,
+    rows: 4,
+    cols: 4,
+    linkOn: true,
+    isSolving: false,
+    laserPath: [],
+    laserAnimating: false
+  });
 
   const isAnkhSpace = (row: number, col: number) => {
-    if (cols - 1 === col || (row === 0 && col === 1) || (row === rows - 1 && col === 1)) {
+    if (game.rows - 1 === col || (row === 0 && col === 1) || (row === game.rows - 1 && col === 1)) {
       return true;
     }
     return false;
   };
 
   const isEyeSpace = (row: number, col: number) => {
-    if (col === 0 || (col === cols - 2 && row === 0) || (col === cols - 2 && row === rows - 1)) {
+    if (
+      col === 0 ||
+      (col === game.cols - 2 && row === 0) ||
+      (col === game.cols - 2 && row === game.rows - 1)
+    ) {
       return true;
     }
     return false;
@@ -107,124 +134,136 @@ const Game: React.FC = () => {
       Array.from({ length: newCols }, () => '')
     );
 
-    setBoardState(newBoardState);
+    setGame((prevGame) => ({
+      ...prevGame,
+      boardState: newBoardState,
+      rows: newRows,
+      cols: newCols
+    }));
   };
 
   const handleCellClick = (row: number, col: number) => {
-    setSelectedCell({ row, col });
-    setPieceSelectionOpen(true);
+    setGame((prevGame) => ({
+      ...prevGame,
+      selectedCell: { row, col },
+      pieceSelectionOpen: true
+    }));
   };
 
   const handleRemovePiece = (row: number, col: number) => {
-    setBoardState((prevBoardState) => {
-      const newBoardState = prevBoardState.map((r) => r.slice());
+    setGame((prevGame) => {
+      const newBoardState = prevGame.boardState.map((r) => r.slice());
       newBoardState[row][col] = null;
-      return newBoardState;
+      return { ...prevGame, boardState: newBoardState };
     });
   };
 
   const handlePieceSelect = async (piece: string) => {
-    if (selectedCell) {
-      const { row, col } = selectedCell;
-      setBoardState((prevBoardState) => {
-        const newBoardState = prevBoardState.map((r) => r.slice());
-        newBoardState[row][col] = piece;
-        return newBoardState;
-      });
-      setSelectedCell(null);
-      setPieceSelectionOpen(false);
-    }
+    setGame((prevGame) => {
+      const newBoardState = prevGame.boardState.map((r) => r.slice());
+      const { row, col } = prevGame.selectedCell || { row: 0, col: 0 };
+      newBoardState[row][col] = piece;
+      return { ...prevGame, boardState: newBoardState, pieceSelectionOpen: false };
+    });
   };
 
   const startGame = async () => {
-    try {
-      const res = await axios.post('/solve', {
-        board: boardState.map((r) => r.map((c) => (c ? c : ' ')))
+    // Initialize the game rotation angles
+
+    setGame((prevGame) => {
+      const newRotationAngles: { [key: string]: number } = {};
+      prevGame.boardState.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          if (cell) {
+            const [_, direction] = cell.split(',');
+            newRotationAngles[`${i}-${j}`] = DIRECTION_TO_ROTATION[direction] || 0;
+          }
+        });
       });
 
-      console.log(res);
-    } catch (error) {
-      // TODO
-      console.error(error);
-    }
-
-    setInitialBoardState(boardState);
-    setEditMode(false);
+      return {
+        ...prevGame,
+        initialBoardState: prevGame.boardState,
+        rotationAngles: newRotationAngles,
+        editMode: false
+      };
+    });
   };
 
-  const resetGame = () => {
-    setGameOver(false);
-    setRotationAngles({});
-    setBoardState(initialBoardState);
-    setGameHistory([]);
-    setLastMove(null);
-    setEditMode(true);
-    setLaserPath([]);
-  };
+  const resetGame = () =>
+    setGame((prevGame) => ({
+      ...prevGame,
+      boardState: prevGame.initialBoardState,
+      gameHistory: [],
+      rotationAngles: {},
+      currentMove: 0,
+      lastMove: null,
+      gameOver: false,
+      editMode: true,
+      pieceSelectionOpen: false,
+      selectedCell: null,
+      laserPath: []
+    }));
 
   const handleMovePiece = (
     fromPosition: { row: number; col: number },
     toPosition: { row: number; col: number }
   ) => {
-    if (currentMove < gameHistory.length - 1) {
-      setCurrentMove(gameHistory.length - 1);
-      setLastMove({
-        from: gameHistory[gameHistory.length - 1].from,
-        to: gameHistory[gameHistory.length - 1].to
-      });
-      setBoardState(gameHistory[gameHistory.length - 1].boardState);
-      setRotationAngles(gameHistory[gameHistory.length - 1].rotationAngles || {});
-      return;
-    }
+    setGame((prevGame) => {
+      const [piece, direction] =
+        prevGame.boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
+      if (!piece) return prevGame;
 
-    const [piece, direction] = boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
-    if (!piece) return;
+      const columnLabels = Array.from({ length: prevGame.cols }, (_, i) =>
+        String.fromCharCode('a'.charCodeAt(0) + i)
+      );
+      const rowLabels = Array.from({ length: prevGame.rows }, (_, i) => String(prevGame.rows - i));
 
-    const columnLabels = Array.from({ length: cols }, (_, i) =>
-      String.fromCharCode('a'.charCodeAt(0) + i)
-    );
-    const rowLabels = Array.from({ length: rows }, (_, i) => String(rows - i));
+      // Update the board rotation angles
+      const newRotationAngles = { ...prevGame.rotationAngles };
+      const fromCellKey = `${fromPosition.row}-${fromPosition.col}`;
+      const toCellKey = `${toPosition.row}-${toPosition.col}`;
+      newRotationAngles[toCellKey] = newRotationAngles[fromCellKey] || 0;
+      delete newRotationAngles[fromCellKey];
 
-    // Update the board rotation angles
-    const newRotationAngles = { ...rotationAngles };
-    const fromCellKey = `${fromPosition.row}-${fromPosition.col}`;
-    const toCellKey = `${toPosition.row}-${toPosition.col}`;
-    newRotationAngles[toCellKey] = newRotationAngles[fromCellKey] || 0;
-    delete newRotationAngles[fromCellKey];
-    setRotationAngles(newRotationAngles);
+      const newBoardState = prevGame.boardState.map((r) => r.slice());
 
-    const newBoardState = boardState.map((r) => r.slice());
-
-    if (piece === 'red_scarab' || piece === 'silver_scarab') {
-      // Swap positions with the piece at the target position
-      const targetPiece = newBoardState[toPosition.row][toPosition.col];
-      newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
-      newBoardState[fromPosition.row][fromPosition.col] = targetPiece;
-    } else {
-      newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
-      newBoardState[fromPosition.row][fromPosition.col] = null;
-    }
-
-    setBoardState(newBoardState);
-    const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
-      columnLabels[toPosition.col]
-    }${rowLabels[toPosition.row]}`;
-    setGameHistory([
-      ...gameHistory,
-      {
-        boardState: newBoardState,
-        move: log,
-        from: fromPosition,
-        to: toPosition,
-        rotationAngles: newRotationAngles
+      if (piece === 'red_scarab' || piece === 'silver_scarab') {
+        // Swap positions with the piece at the target position
+        const targetPiece = newBoardState[toPosition.row][toPosition.col];
+        newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
+        newBoardState[fromPosition.row][fromPosition.col] = targetPiece;
+      } else {
+        newBoardState[toPosition.row][toPosition.col] = `${piece},${direction}`;
+        newBoardState[fromPosition.row][fromPosition.col] = null;
       }
-    ]);
-    setLastMove({ from: fromPosition, to: toPosition });
-    setCurrentMove(gameHistory.length);
+
+      const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
+        columnLabels[toPosition.col]
+      }${rowLabels[toPosition.row]}`;
+
+      return {
+        ...prevGame,
+        boardState: newBoardState,
+        gameHistory: [
+          ...prevGame.gameHistory,
+          {
+            boardState: newBoardState,
+            move: log,
+            from: fromPosition,
+            to: toPosition,
+            rotationAngles: newRotationAngles
+          }
+        ],
+        lastMove: { from: fromPosition, to: toPosition },
+        currentMove: prevGame.gameHistory.length,
+        rotationAngles: newRotationAngles
+      };
+    });
   };
 
   const animateLaser = (currentBoardState: (string | null)[][]) => {
-    if (editMode) return;
+    if (game.editMode) return;
 
     // Find the 'bl' piece on the board
     let silverSphinxPos = null;
@@ -249,7 +288,7 @@ const Game: React.FC = () => {
     }
 
     if (!silverSphinxPos) {
-      console.error('No silver sphix "ssp" found on the board.');
+      console.error('No silver sphinx found on the board.');
       return;
     }
 
@@ -278,7 +317,7 @@ const Game: React.FC = () => {
     const step = () => {
       if (steps++ > maxSteps) {
         console.error('Laser simulation exceeded maximum steps.');
-        setLaserPath([...path]);
+        setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: false }));
         return;
       }
 
@@ -289,7 +328,10 @@ const Game: React.FC = () => {
       // Check bounds
       if (x < 0 || x >= currentBoardState[0].length || y < 0 || y >= currentBoardState.length) {
         // Laser is out of bounds, end animation
-        setTimeout(() => setLaserPath([]), LASER_SPEED * 5);
+        setTimeout(
+          () => setGame((prevGame) => ({ ...prevGame, laserAnimating: false, laserPath: [] })),
+          LASER_SPEED * 5
+        );
         return;
       }
 
@@ -316,36 +358,40 @@ const Game: React.FC = () => {
             exit: newDirection
           });
           currentDirection = newDirection;
-          setLaserPath([...path]);
+          setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: true }));
           setTimeout(step, LASER_SPEED);
         } else {
           // Laser is blocked or absorbed, end animation
-          console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', piece);
+          //console.log('Laser hit a piece at', { row: y, col: x }, 'Piece:', piece);
           if (piece === 'red_pharaoh' || piece === 'silver_pharaoh') {
-            setGameOver(true);
             path.push({
               row: y,
               col: x,
               entry: cellEntry,
               exit: ''
             });
-            setLaserPath([...path]);
+            setGame((prevGame) => ({
+              ...prevGame,
+              laserPath: [...path],
+              gameOver: true,
+              laserAnimating: false
+            }));
           } else if (piece === 'red_sphinx' || piece === 'silver_sphinx') {
             // Sphinx can't be destroyed by the laser
-            console.log('Sphinx absorbed the laser');
+            //console.log('Sphinx absorbed the laser');
             path.push({
               row: y,
               col: x,
               entry: cellEntry,
               exit: ''
             });
-            setLaserPath([]);
+            setGame((prevGame) => ({ ...prevGame, laserPath: [], laserAnimating: false }));
           } else if (piece === 'red_anubis' || piece === 'silver_anubis') {
             // Check if the anubis is facing the laser. Note that 'up' is the default direction
             // and Anubis piece is looking towards the right. If he's looking towards the laser,
             // the laser will be absorbed otherwise he will die.
             const anubisDirection = pieceDirection;
-            console.log('Anubis direction:', anubisDirection, 'Laser direction:', currentDirection);
+            //console.log('Anubis direction:', anubisDirection, 'Laser direction:', currentDirection);
             if (
               (anubisDirection === 'up' && currentDirection === 'left') ||
               (anubisDirection === 'right' && currentDirection === 'up') ||
@@ -360,22 +406,32 @@ const Game: React.FC = () => {
                 entry: cellEntry,
                 exit: ''
               });
-              setLaserPath([...path]);
-              setTimeout(() => setLaserPath([]), LASER_SPEED * 5);
+              setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: false }));
+              setTimeout(
+                () => setGame((prevGame) => ({ ...prevGame, laserPath: [] })),
+                LASER_SPEED * 5
+              );
             } else {
               // Anubis is dead, remove it from the board
               const newBoardState = currentBoardState.map((r) => r.slice());
               newBoardState[y][x] = null;
-              setBoardState(newBoardState);
-              setLaserPath([]);
+              setGame((prevGame) => ({
+                ...prevGame,
+                boardState: newBoardState,
+                laserPath: [],
+                laserAnimating: false
+              }));
             }
           } else {
             // Piece is dead, remove it from the board
-            console.log('Piece is dead, removing it from the board');
+            //console.log('Piece is dead, removing it from the board');
             const newBoardState = currentBoardState.map((r) => r.slice());
             newBoardState[y][x] = null;
-            setBoardState(newBoardState);
-            setLaserPath([]);
+            setGame((prevGame) => ({
+              ...prevGame,
+              boardState: newBoardState,
+              laserAnimating: false
+            }));
           }
         }
         return;
@@ -390,12 +446,12 @@ const Game: React.FC = () => {
       });
 
       // Continue laser movement after a delay
-      setLaserPath([...path]);
+      setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: true }));
       setTimeout(step, LASER_SPEED);
     };
 
     // Start the laser movement
-    setLaserPath([...path]);
+    setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: true }));
     setTimeout(step, LASER_SPEED);
   };
 
@@ -448,103 +504,105 @@ const Game: React.FC = () => {
   };
 
   const handleRotatePiece = (row: number, col: number, rotationDirection: string) => {
-    const cellValue = boardState[row][col];
-    if (!cellValue) return; // No piece to rotate
-    const [pieceName, oldDirection] = cellValue.split(',').map((part) => part.trim());
+    setGame((prevGame) => {
+      const cellValue = prevGame.boardState[row][col];
+      if (!cellValue) return prevGame; // No piece to rotate
+      const [pieceName, oldDirection] = cellValue.split(',').map((part: string) => part.trim());
 
-    let newDirection = '';
+      // Calculate the new rotation angle
+      const cellKey = `${row}-${col}`;
+      const previousRotation =
+        prevGame.rotationAngles[cellKey] || DIRECTION_TO_ROTATION[oldDirection] || 0;
+      const rotationDelta = rotationDirection === 'left' ? -90 : 90;
+      const newRotation = previousRotation + rotationDelta;
 
-    // Calculate the new rotation angle
-    const cellKey = `${row}-${col}`;
-    const previousRotation = rotationAngles[cellKey] || DIRECTION_TO_ROTATION[oldDirection] | 0;
-    const rotationDelta = rotationDirection === 'left' ? -90 : 90;
-    const newRotation = previousRotation + rotationDelta;
+      // Update the rotation angle in state
+      const newRotationAngles = { ...prevGame.rotationAngles, [cellKey]: newRotation };
 
-    // Update the rotation angle in state
-    const newRotationAngles = { ...rotationAngles, [cellKey]: newRotation };
+      const newBoardState = prevGame.boardState.map((r: (string | null)[]) => r.slice());
 
-    setRotationAngles(newRotationAngles);
-
-    switch (oldDirection) {
-      case 'left':
-        if (rotationDirection === 'left') {
-          newDirection = 'down';
-        } else {
-          newDirection = 'up';
-        }
-        break;
-      case 'right':
-        if (rotationDirection === 'left') {
-          newDirection = 'up';
-        } else {
-          newDirection = 'down';
-        }
-        break;
-      case 'down':
-        if (rotationDirection === 'left') {
-          newDirection = 'right';
-        } else {
-          newDirection = 'left';
-        }
-        break;
-      case 'up':
-      default:
-        if (rotationDirection === 'left') {
-          newDirection = 'left';
-        } else {
-          newDirection = 'right';
-        }
-        break;
-    }
-
-    const newCellValue = `${pieceName},${newDirection}`;
-
-    // Same as moving piece, we will just rotate the piece in place
-    const newBoardState = boardState.map((r) => r.slice());
-    newBoardState[row][col] = newCellValue;
-    setBoardState(newBoardState);
-
-    if (editMode) return;
-
-    const [pieceType] = newCellValue.split(',');
-
-    const log = `${pieceType} rotated`;
-    const fromPosition = { row, col };
-    const toPosition = { row, col };
-
-    setGameHistory([
-      ...gameHistory,
-      {
-        boardState: newBoardState,
-        move: log,
-        from: fromPosition,
-        to: toPosition,
-        rotationAngles: newRotationAngles
+      let newDirection = '';
+      switch (oldDirection) {
+        case 'left':
+          if (rotationDirection === 'left') {
+            newDirection = 'down';
+          } else {
+            newDirection = 'up';
+          }
+          break;
+        case 'right':
+          if (rotationDirection === 'left') {
+            newDirection = 'up';
+          } else {
+            newDirection = 'down';
+          }
+          break;
+        case 'down':
+          if (rotationDirection === 'left') {
+            newDirection = 'right';
+          } else {
+            newDirection = 'left';
+          }
+          break;
+        case 'up':
+        default:
+          if (rotationDirection === 'left') {
+            newDirection = 'left';
+          } else {
+            newDirection = 'right';
+          }
+          break;
       }
-    ]);
-    setLastMove({ from: fromPosition, to: toPosition });
-    setCurrentMove(gameHistory.length);
+
+      newBoardState[row][col] = `${pieceName},${newDirection}`;
+
+      const [pieceType] = newBoardState[row][col]?.split(',') || [];
+      const log = `${pieceType} rotated ${rotationDirection}`;
+      const fromPosition = { row, col };
+      const toPosition = { row, col };
+
+      return {
+        ...prevGame,
+        boardState: newBoardState,
+        rotationAngles: newRotationAngles,
+        gameHistory: [
+          ...prevGame.gameHistory,
+          {
+            boardState: newBoardState,
+            move: log,
+            from: fromPosition,
+            to: toPosition,
+            rotationAngles: newRotationAngles
+          }
+        ],
+        lastMove: { from: fromPosition, to: toPosition },
+        currentMove: prevGame.gameHistory.length
+      };
+    });
   };
 
   useEffect(() => {
-    if (currentMove >= gameHistory.length || gameHistory.length === 0) return;
-    const currentBoardState = gameHistory[currentMove].boardState;
+    if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) return;
+    const currentBoardState = game.gameHistory[game.currentMove].boardState;
     animateLaser(currentBoardState);
-  }, [gameHistory, currentMove]);
+  }, [game.gameHistory, game.currentMove]);
 
   useEffect(() => {
-    if (boardState.length === 0) return;
-    setRows(boardState.length);
-    setCols(boardState[0].length);
-  }, [boardState]);
+    if (game.boardState.length === 0) return;
+    setGame((prevGame) => ({
+      ...prevGame,
+      rows: game.boardState.length,
+      cols: game.boardState[0].length
+    }));
+  }, [game.boardState]);
 
   const availablePieces: PieceType[] = Object.keys(Pieces) as PieceType[];
 
-  const saveGameBoard = async (blob) => {
+  const saveGameBoard = async (blob: Blob) => {
     const a = document.createElement('a');
     a.download = 'my-file.txt';
     a.href = URL.createObjectURL(blob);
-    a.addEventListener('click', (e) => {
+    a.addEventListener('click', (_) => {
       setTimeout(() => URL.revokeObjectURL(a.href), 30 * 1000);
     });
     a.click();
@@ -552,12 +610,117 @@ const Game: React.FC = () => {
 
   const loadGameBoard = async (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      if (!e.target || !e.target.result) return;
       const content = e.target.result as string;
       const newBoardState = JSON.parse(content);
-      setBoardState(newBoardState);
+      setGame((prevGame) => ({ ...prevGame, boardState: newBoardState }));
     };
     reader.readAsText(file);
+  };
+
+  const solveGame = async () => {
+    setGame((prevGame) => ({ ...prevGame, isSolving: true }));
+    try {
+      const res = await axios.post('/solve', {
+        board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+      });
+
+      const solution = res.data;
+      if (!solution) {
+        console.error('No solution found.');
+        return;
+      }
+
+      // Loop through each step in the solution, find the piece position in () and the direction after ->
+      solution.split('\n').forEach((step: string) => {
+        // Extract the piece position (n, m)
+        const positionMatch = step.match(/\((\d+),\s*(\d+)\)/);
+        if (positionMatch) {
+          const backendCol = parseInt(positionMatch[1], 10);
+          const backendRow = parseInt(positionMatch[2], 10);
+
+          console.log(`Backend position: (${backendRow}, ${backendCol})`);
+
+          // Convert backend position to frontend position
+          const frontendRow = game.rows - backendRow - 1;
+          const frontendCol = backendCol;
+
+          // Extract the action after '->'
+          const actionMatch = step.match(/->\s*(.*)/);
+          if (actionMatch) {
+            const action = actionMatch[1].trim();
+
+            // Check if the action is a rotation or a direction
+            if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
+              const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
+              // Handle rotation
+              console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
+              handleRotatePiece(frontendRow, frontendCol, rotation);
+            } else {
+              const direction = action.toUpperCase();
+              // Map the direction to new row/column
+              let newRow = frontendRow;
+              let newCol = frontendCol;
+
+              switch (direction) {
+                case 'NORTH':
+                  newRow -= 1;
+                  break;
+                case 'SOUTH':
+                  newRow += 1;
+                  break;
+                case 'EAST':
+                  newCol += 1;
+                  break;
+                case 'WEST':
+                  newCol -= 1;
+                  break;
+                case 'NORTH_EAST':
+                  newRow -= 1;
+                  newCol += 1;
+                  break;
+                case 'NORTH_WEST':
+                  newRow -= 1;
+                  newCol -= 1;
+                  break;
+                case 'SOUTH_EAST':
+                  newRow += 1;
+                  newCol += 1;
+                  break;
+                case 'SOUTH_WEST':
+                  newRow += 1;
+                  newCol -= 1;
+                  break;
+                default:
+                  console.error(`Unknown direction: ${direction}`);
+                  break;
+              }
+
+              console.log(
+                `Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`
+              );
+              // You can call your movement function here
+              handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
+            }
+          }
+        } else {
+          console.error(`Could not parse position from step: ${step}`);
+        }
+      });
+    } catch (error) {
+      // TODO
+      console.error(error);
+    }
+
+    setGame((prevGame: Game) => ({
+      ...prevGame,
+      isSolving: false,
+      currentMove: 0,
+      lastMove: { from: prevGame.gameHistory[0].from, to: prevGame.gameHistory[0].to },
+      boardState: prevGame.gameHistory[0].boardState,
+      rotationAngles: prevGame.gameHistory[0].rotationAngles
+    }));
   };
 
   return (
@@ -565,23 +728,19 @@ const Game: React.FC = () => {
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
         Khet
       </Typography>
-      {gameOver && (
+      {game.gameOver && (
         <Typography variant="h5" align="center" style={{ marginBottom: 25, color: 'red' }}>
           Game Over
         </Typography>
       )}
-      {editMode ? (
+      {game.editMode ? (
         <Stack direction="row" alignItems="start">
           <Board
-            boardState={boardState}
+            game={game}
             onMovePiece={handleMovePiece}
             onCellClick={handleCellClick}
             onRemovePiece={handleRemovePiece}
-            isEditable={true}
-            laserPath={laserPath}
             onRotatePiece={handleRotatePiece}
-            rotationAngles={rotationAngles}
-            onRotationAnglesChange={setRotationAngles}
           />
 
           <Paper elevation={20} sx={{ width: '300px', borderRadius: 5 }}>
@@ -591,24 +750,26 @@ const Game: React.FC = () => {
                   label="Rows"
                   type="number"
                   variant="standard"
-                  value={rows}
+                  value={game.rows}
                   onChange={(e) =>
                     handleBoardSizeChange(
                       parseInt(e.target.value) || 0,
-                      linkOn ? parseInt(e.target.value) : cols
+                      game.linkOn ? parseInt(e.target.value) : game.cols
                     )
                   }
                 />
 
-                <Tooltip title={linkOn ? 'Rows/Columns linked' : 'Rows/Columns not linked'}>
+                <Tooltip title={game.linkOn ? 'Rows/Columns linked' : 'Rows/Columns not linked'}>
                   <span>
                     <IconButton
                       size="small"
                       sx={{ m: 1 }}
-                      onClick={() => setLinkOn(!linkOn)}
-                      color={linkOn ? 'primary' : 'default'}
+                      onClick={() =>
+                        setGame((prevGame) => ({ ...prevGame, linkOn: !prevGame.linkOn }))
+                      }
+                      color={game.linkOn ? 'primary' : 'default'}
                     >
-                      {linkOn ? <LinkIcon /> : <LinkOff />}
+                      {game.linkOn ? <LinkIcon /> : <LinkOff />}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -617,10 +778,10 @@ const Game: React.FC = () => {
                   label="Columns"
                   type="number"
                   variant="standard"
-                  value={cols}
+                  value={game.cols}
                   onChange={(e) =>
                     handleBoardSizeChange(
-                      linkOn ? parseInt(e.target.value) : rows,
+                      game.linkOn ? parseInt(e.target.value) : game.rows,
                       parseInt(e.target.value) || 0
                     )
                   }
@@ -631,7 +792,7 @@ const Game: React.FC = () => {
                 variant="contained"
                 color="primary"
                 onClick={() =>
-                  saveGameBoard(new Blob([JSON.stringify(boardState)], { type: 'text/plain' }))
+                  saveGameBoard(new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' }))
                 }
                 style={{ marginTop: 15 }}
               >
@@ -663,7 +824,10 @@ const Game: React.FC = () => {
             </Stack>
           </Paper>
 
-          <Dialog open={pieceSelectionOpen} onClose={() => setPieceSelectionOpen(false)}>
+          <Dialog
+            open={game.pieceSelectionOpen}
+            onClose={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
+          >
             <DialogTitle>Select a Piece</DialogTitle>
             <DialogContent>
               <Grid container spacing={2} columns={10}>
@@ -672,8 +836,8 @@ const Game: React.FC = () => {
                     {availablePieces
                       .filter((pieceKey: PieceType) => pieceKey.startsWith(color))
                       .filter((pieceKey: PieceType) => {
-                        if (selectedCell) {
-                          const { row, col } = selectedCell;
+                        if (game.selectedCell) {
+                          const { row, col } = game.selectedCell;
                           if (pieceKey.startsWith('red') && isAnkhSpace(row, col)) {
                             return false;
                           }
@@ -700,38 +864,51 @@ const Game: React.FC = () => {
               </Grid>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setPieceSelectionOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
+              >
+                Close
+              </Button>
             </DialogActions>
           </Dialog>
         </Stack>
+      ) : game.isSolving ? (
+        <Container>
+          <video autoPlay width={'50%'} height={'50%'} loop>
+            <source src={BuildingBlocks} type="video/mp4" />
+          </video>
+        </Container>
       ) : (
         <Stack direction="row" alignItems="start">
-          <Board
-            boardState={boardState}
-            onMovePiece={handleMovePiece}
-            lastMove={lastMove}
-            laserPath={laserPath}
-            onRotatePiece={handleRotatePiece}
-            rotationAngles={rotationAngles}
-            onRotationAnglesChange={setRotationAngles}
-          />
+          <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
           <Paper elevation={20} sx={{ width: '400px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
-              <HistoryTable
-                gameHistory={gameHistory}
-                setBoardState={setBoardState}
-                setLastMove={setLastMove}
-                currentMove={currentMove}
-                setCurrentMove={setCurrentMove}
-                setRotationAngles={setRotationAngles}
-              />
+              <HistoryTable game={game} setGame={setGame} />
 
               <Stack direction="row" alignContent={'space-evenly'} spacing={2}>
                 <Tooltip title="Reset Game">
                   <span>
-                    <Button variant="contained" onClick={resetGame}>
+                    <Button
+                      disabled={game.laserAnimating}
+                      variant="contained"
+                      onClick={resetGame}
+                      color="secondary"
+                    >
                       <Add />
+                    </Button>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Solve Game">
+                  <span>
+                    <Button
+                      disabled={game.gameOver || game.laserAnimating}
+                      variant="contained"
+                      onClick={solveGame}
+                      color="primary"
+                    >
+                      <AutoAwesome />
                     </Button>
                   </span>
                 </Tooltip>
@@ -740,17 +917,25 @@ const Game: React.FC = () => {
                   <span>
                     <Button
                       variant="contained"
-                      disabled={currentMove === 0 || gameHistory.length === 0}
+                      disabled={
+                        game.laserAnimating ||
+                        game.currentMove === 0 ||
+                        game.gameHistory.length === 0
+                      }
                       onClick={() => {
-                        if (currentMove === 0) return;
-                        const newMove = currentMove > 0 ? currentMove - 1 : currentMove;
-                        setCurrentMove(newMove);
-                        setBoardState(gameHistory[newMove].boardState);
-                        setLastMove({
-                          from: gameHistory[newMove].from,
-                          to: gameHistory[newMove].to
-                        });
-                        setRotationAngles(gameHistory[newMove].rotationAngles || {});
+                        if (game.currentMove === 0) return;
+                        const newMove =
+                          game.currentMove > 0 ? game.currentMove - 1 : game.currentMove;
+                        setGame((prevGame) => ({
+                          ...prevGame,
+                          currentMove: newMove,
+                          boardState: game.gameHistory[newMove].boardState,
+                          lastMove: {
+                            from: game.gameHistory[newMove].from,
+                            to: game.gameHistory[newMove].to
+                          },
+                          rotationAngles: game.gameHistory[newMove].rotationAngles || {}
+                        }));
                       }}
                       color="primary"
                     >
@@ -763,18 +948,27 @@ const Game: React.FC = () => {
                   <span>
                     <Button
                       variant="contained"
-                      disabled={currentMove === gameHistory.length - 1 || gameHistory.length === 0}
+                      disabled={
+                        game.laserAnimating ||
+                        game.currentMove === game.gameHistory.length - 1 ||
+                        game.gameHistory.length === 0
+                      }
                       onClick={() => {
-                        if (gameHistory.length === 0) return;
+                        if (game.gameHistory.length === 0) return;
                         const newMove =
-                          currentMove < gameHistory.length - 1 ? currentMove + 1 : currentMove;
-                        setCurrentMove(newMove);
-                        setBoardState(gameHistory[newMove].boardState);
-                        setLastMove({
-                          from: gameHistory[newMove].from,
-                          to: gameHistory[newMove].to
-                        });
-                        setRotationAngles(gameHistory[newMove].rotationAngles || {});
+                          game.currentMove < game.gameHistory.length - 1
+                            ? game.currentMove + 1
+                            : game.currentMove;
+                        setGame((prevGame) => ({
+                          ...prevGame,
+                          currentMove: newMove,
+                          boardState: game.gameHistory[newMove].boardState,
+                          lastMove: {
+                            from: game.gameHistory[newMove].from,
+                            to: game.gameHistory[newMove].to
+                          },
+                          rotationAngles: game.gameHistory[newMove].rotationAngles || {}
+                        }));
                       }}
                       color="primary"
                     >

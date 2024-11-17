@@ -158,7 +158,7 @@ class Board:
         ax.set_yticklabels([str(self.n - i - 1) for i in range(self.n)])
 
         plt.gca().invert_yaxis()
-        plt.show()
+        #plt.show()
 
     def get_grid_position(self, position):
         x, y = position
