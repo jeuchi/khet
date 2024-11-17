@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react-swc'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   return {
-    base: "/khet",
+    base: "/khet/ui",
     plugins: [react()],
     server: {
       hmr: {
