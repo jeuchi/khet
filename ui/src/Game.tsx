@@ -15,7 +15,6 @@ import {
   Container,
   Card,
   CardActionArea,
-  CardMedia,
   CardContent
 } from '@mui/material';
 import Board from './Board';
