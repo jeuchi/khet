@@ -384,7 +384,7 @@ const Board: React.FC<BoardProps> = ({
                           <Sprite
                             src={Pieces[piece].image}
                             alt={`Piece at ${rowIndex},${colIndex}`}
-                            draggable={!game.editMode && game.laserAnimating}
+                            draggable={!game.editMode || game.laserAnimating}
                             onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
                             onDragEnd={handleDragEnd}
                             sx={{
@@ -392,7 +392,8 @@ const Board: React.FC<BoardProps> = ({
                                 selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
                                   ? 'scale(1.3)'
                                   : ''
-                              }`
+                              }`,
+                              position: 'relative'
                             }}
                           />
                           {game.editMode && (

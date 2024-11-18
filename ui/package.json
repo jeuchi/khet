@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "api": "cd ../api/ && flask run --no-debugger",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -19,7 +19,9 @@
     "@mui/material": "^6.1.6",
     "axios": "^1.7.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-device-detect": "^2.2.3",
+    "react-dom": "^18.3.1",
+    "require-context": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

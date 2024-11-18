@@ -12,7 +12,11 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Container
+  Container,
+  Card,
+  CardActionArea,
+  CardMedia,
+  CardContent
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -25,7 +29,27 @@ import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
-import BuildingBlocks from './assets/building-blocks.mp4';
+import BuildingBlocks from './assets/building-blocks.gif';
+import { isMobile } from 'react-device-detect';
+import test0 from './assets/boards/test-0.txt';
+import test1 from './assets/boards/test-1.txt';
+import test2 from './assets/boards/test-2.txt';
+import test3 from './assets/boards/test-3.txt';
+import test4 from './assets/boards/test-4.txt';
+import test5 from './assets/boards/test-5.txt';
+import test6 from './assets/boards/test-6.txt';
+import test7 from './assets/boards/test-7.txt';
+
+const AVAILABLE_BOARDS = [
+  { name: 'Test 0', file: test0 },
+  { name: 'Test 1', file: test1 },
+  { name: 'Test 2', file: test2 },
+  { name: 'Test 3', file: test3 },
+  { name: 'Test 4', file: test4 },
+  { name: 'Test 5', file: test5 },
+  { name: 'Test 6', file: test6 },
+  { name: 'Test 7', file: test7 }
+];
 
 export interface GameHistory {
   boardState: (string | null)[][];
@@ -63,6 +87,7 @@ export interface Game {
     exit: string;
   }[];
   laserAnimating: boolean;
+  boardSelectionOpen: boolean;
 }
 
 // Direction vectors
@@ -105,7 +130,8 @@ const Game: React.FC = () => {
     linkOn: true,
     isSolving: false,
     laserPath: [],
-    laserAnimating: false
+    laserAnimating: false,
+    boardSelectionOpen: false
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -185,7 +211,16 @@ const Game: React.FC = () => {
         ...prevGame,
         initialBoardState: prevGame.boardState,
         rotationAngles: newRotationAngles,
-        editMode: false
+        editMode: false,
+        gameHistory: [],
+        currentMove: 0,
+        lastMove: null,
+        gameOver: false,
+        laserPath: [],
+        laserAnimating: false,
+        selectedCell: null,
+        pieceSelectionOpen: false,
+        isSolving: false
       };
     });
   };
@@ -565,18 +600,20 @@ const Game: React.FC = () => {
         ...prevGame,
         boardState: newBoardState,
         rotationAngles: newRotationAngles,
-        gameHistory: [
-          ...prevGame.gameHistory,
-          {
-            boardState: newBoardState,
-            move: log,
-            from: fromPosition,
-            to: toPosition,
-            rotationAngles: newRotationAngles
-          }
-        ],
-        lastMove: { from: fromPosition, to: toPosition },
-        currentMove: prevGame.gameHistory.length
+        gameHistory: prevGame.editMode
+          ? []
+          : [
+              ...prevGame.gameHistory,
+              {
+                boardState: newBoardState,
+                move: log,
+                from: fromPosition,
+                to: toPosition,
+                rotationAngles: newRotationAngles
+              }
+            ],
+        lastMove: prevGame.editMode ? null : { from: fromPosition, to: toPosition },
+        currentMove: prevGame.editMode ? 0 : prevGame.gameHistory.length
       };
     });
   };
@@ -606,6 +643,21 @@ const Game: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(a.href), 30 * 1000);
     });
     a.click();
+  };
+
+  const selectGameBoard = async (file: string) => {
+    try {
+      const response = await fetch(file);
+      const content = await response.text();
+      const newBoardState = JSON.parse(content);
+      setGame((prevGame) => ({
+        ...prevGame,
+        boardState: newBoardState,
+        boardSelectionOpen: false
+      }));
+    } catch (error) {
+      console.error('Error loading board:', error);
+    }
   };
 
   const loadGameBoard = async (file: File) => {
@@ -734,7 +786,7 @@ const Game: React.FC = () => {
         </Typography>
       )}
       {game.editMode ? (
-        <Stack direction="row" alignItems="start">
+        <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems="start">
           <Board
             game={game}
             onMovePiece={handleMovePiece}
@@ -743,7 +795,7 @@ const Game: React.FC = () => {
             onRotatePiece={handleRotatePiece}
           />
 
-          <Paper elevation={20} sx={{ width: '300px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ borderRadius: 5 }}>
             <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
               <Stack direction="row" justifyContent={'space-evenly'}>
                 <TextField
@@ -796,7 +848,7 @@ const Game: React.FC = () => {
                 }
                 style={{ marginTop: 15 }}
               >
-                Save Game Board
+                Save Board
               </Button>
 
               <Button
@@ -805,7 +857,7 @@ const Game: React.FC = () => {
                 component="label"
                 style={{ marginTop: 15 }}
               >
-                Load Game Board
+                Load Board
                 <input
                   type="file"
                   hidden
@@ -813,6 +865,48 @@ const Game: React.FC = () => {
                 />
               </Button>
 
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: true }))}
+                style={{ marginTop: 15 }}
+              >
+                Select Puzzle
+              </Button>
+
+              <Dialog
+                fullWidth
+                open={game.boardSelectionOpen}
+                onClose={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))}
+              >
+                <DialogTitle>Select a Puzzle</DialogTitle>
+                <DialogContent>
+                  <Grid container spacing={2}>
+                    {AVAILABLE_BOARDS.map((board) => (
+                      <Grid item xs={12} sm={6} md={4} key={board.name}>
+                        <Card sx={{ maxWidth: 345 }}>
+                          <CardActionArea onClick={() => selectGameBoard(board.file)}>
+                            <CardContent>
+                              <Typography gutterBottom variant="h5" component="div">
+                                {board.name}
+                              </Typography>
+                            </CardContent>
+                          </CardActionArea>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </DialogContent>
+                <DialogActions>
+                  <Button
+                    onClick={() =>
+                      setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))
+                    }
+                  >
+                    Close
+                  </Button>
+                </DialogActions>
+              </Dialog>
               <Button
                 variant="contained"
                 color="secondary"
@@ -873,16 +967,19 @@ const Game: React.FC = () => {
           </Dialog>
         </Stack>
       ) : game.isSolving ? (
-        <Container>
-          <video autoPlay width={'50%'} height={'50%'} loop>
-            <source src={BuildingBlocks} type="video/mp4" />
-          </video>
-        </Container>
+        <Stack direction="column" alignItems="start">
+          <Container>
+            <Typography variant="h4" align="center" style={{ marginBottom: 25 }} fontWeight={500}>
+              Solving...
+            </Typography>
+            <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '100%' }} />.
+          </Container>
+        </Stack>
       ) : (
-        <Stack direction="row" alignItems="start">
+        <Stack direction={isMobile ? 'column' : 'row'} alignItems="start" spacing={2}>
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '400px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ width: '100%', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 

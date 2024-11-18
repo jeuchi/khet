@@ -5,8 +5,8 @@ import RedPharaoh from './assets/red-pharaoh.svg';
 import SilverPharaoh from './assets/silver-pharaoh.svg';
 import RedPyramid from './assets/red-pyramid.svg';
 import SilverPyramid from './assets/silver-pyramid.svg';
-import RedScarab from './assets/red-scarab.png';
-import SilverScarab from './assets/silver-scarab.png';
+import RedScarab from './assets/red-scarab.svg';
+import SilverScarab from './assets/silver-scarab.svg';
 import RedAnubis from './assets/red-anubis.svg';
 import SilverAnubis from './assets/silver-anubis.svg';
 
