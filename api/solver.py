@@ -7,6 +7,7 @@ import os
 
 def solve_single_agent(starting_board, player_color, debug = False):
     # Create the root node
+    TreeNode.reset_visited()
     root = TreeNode(starting_board)
     winning_node = find_winning_node_single_agent(root, player_color)
 
@@ -73,6 +74,11 @@ class TreeNode:
     @classmethod
     def add_visited_board(cls, board):
         cls.visited_boards.add(board)
+
+    @classmethod
+    def reset_visited(cls):
+        cls.visited_boards = set()
+        nodes_made = 0
 
     @classmethod
     def is_visited(cls, board):
