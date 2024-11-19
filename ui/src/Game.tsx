@@ -79,7 +79,6 @@ export interface Game {
   rows: number;
   cols: number;
   linkOn: boolean;
-  isSolving: boolean;
   laserPath: {
     row: number;
     col: number;
@@ -89,6 +88,10 @@ export interface Game {
   laserAnimating: boolean;
   boardSelectionOpen: boolean;
   animateHistory: boolean;
+  solvingSteps: string[] | null;
+  currentSolvingStepIndex: number;
+  isSolving: boolean;
+  callingApi: boolean;
 }
 
 // Direction vectors
@@ -129,11 +132,14 @@ const Game: React.FC = () => {
     rows: 4,
     cols: 4,
     linkOn: true,
-    isSolving: false,
     laserPath: [],
     laserAnimating: false,
     boardSelectionOpen: false,
-    animateHistory: false
+    animateHistory: false,
+    solvingSteps: null,
+    currentSolvingStepIndex: 0,
+    isSolving: false,
+    callingApi: false
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -449,15 +455,18 @@ const Game: React.FC = () => {
                 LASER_SPEED * 5
               );
             } else {
-              // Anubis is dead, remove it from the board
-              const newBoardState = currentBoardState.map((r) => r.slice());
-              newBoardState[y][x] = null;
-              setGame((prevGame) => ({
-                ...prevGame,
-                boardState: newBoardState,
-                laserPath: [],
-                laserAnimating: false
-              }));
+                // Anubis is dead, remove it from the board
+                setGame((prevGame) => {
+                const newBoardState = currentBoardState.map((r) => r.slice());
+                newBoardState[y][x] = null;
+                
+                return {
+                  ...prevGame,
+                  boardState: newBoardState,
+                  laserPath: [],
+                  laserAnimating: false,
+                };
+                });
             }
           } else {
             // Piece is dead, remove it from the board
@@ -621,12 +630,6 @@ const Game: React.FC = () => {
   };
 
   useEffect(() => {
-    if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) return;
-    const currentBoardState = game.gameHistory[game.currentMove].boardState;
-    animateLaser(currentBoardState);
-  }, [game.gameHistory, game.currentMove]);
-
-  useEffect(() => {
     if (game.boardState.length === 0) return;
     setGame((prevGame) => ({
       ...prevGame,
@@ -673,105 +676,135 @@ const Game: React.FC = () => {
     reader.readAsText(file);
   };
 
+
   const solveGame = async () => {
-    setGame((prevGame) => ({ ...prevGame, isSolving: true }));
+    setGame((prevGame) => ({ ...prevGame, callingApi: true }));
+
     try {
       const res = await axios.post('/solve', {
-        board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+        board: game.boardState.map((r) => r.map((c) => (c ? c : ' '))),
       });
-
+  
       const solution = res.data;
       if (!solution) {
         console.error('No solution found.');
         return;
       }
-
-      // Loop through each step in the solution, find the piece position in () and the direction after ->
-      solution.split('\n').forEach((step: string) => {
-        // Extract the piece position (n, m)
-        if (!step || step.length === 0) {
-          return;
-        }
-
-        const [backendColStr, backendRowStr, action] = step.split(',');
-        if (!backendRowStr || !backendColStr || !action) {
-          return;
-        }
-
-        const backendRow = parseInt(backendRowStr);
-        const backendCol = parseInt(backendColStr);
-
-        // Convert backend position to frontend position
-        const frontendRow = game.rows - backendRow - 1;
-        const frontendCol = backendCol;
-
-        // Check if the action is a rotation or a direction
-        if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
-          const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
-          // Handle rotation
-          console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
-          handleRotatePiece(frontendRow, frontendCol, rotation);
-        } else {
-          const direction = action.toUpperCase();
-          // Map the direction to new row/column
-          let newRow = frontendRow;
-          let newCol = frontendCol;
-
-          switch (direction) {
-            case 'NORTH':
-              newRow -= 1;
-              break;
-            case 'SOUTH':
-              newRow += 1;
-              break;
-            case 'EAST':
-              newCol += 1;
-              break;
-            case 'WEST':
-              newCol -= 1;
-              break;
-            case 'NORTH_EAST':
-              newRow -= 1;
-              newCol += 1;
-              break;
-            case 'NORTH_WEST':
-              newRow -= 1;
-              newCol -= 1;
-              break;
-            case 'SOUTH_EAST':
-              newRow += 1;
-              newCol += 1;
-              break;
-            case 'SOUTH_WEST':
-              newRow += 1;
-              newCol -= 1;
-              break;
-            default:
-              console.error(`Unknown direction: ${direction}`);
-              break;
-          }
-
-          console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
-          // You can call your movement function here
-          handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
-        }
-      });
-
-      setGame((prevGame: Game) => ({
+  
+      const steps = solution.split('\n').filter((step:string) => step && step.length > 0);
+  
+      // Set the solving steps and start index
+      setGame((prevGame) => ({
         ...prevGame,
-        isSolving: false,
-        currentMove: 0,
-        lastMove: { from: prevGame.gameHistory[0].from, to: prevGame.gameHistory[0].to },
-        boardState: prevGame.gameHistory[0].boardState,
-        rotationAngles: prevGame.gameHistory[0].rotationAngles,
-        animateHistory: true,
-        gameOver: true
+        solvingSteps: steps,
+        currentSolvingStepIndex: 0,
+        isSolving: true,
+        callingApi: false
       }));
     } catch (error) {
-      setGame((prevGame) => ({ ...prevGame, isSolving: false }));
+      setGame((prevGame) => ({ ...prevGame, callingApi: false }));
       toast('Error solving the game');
     }
   };
+  
+  // Define a function to process the next step
+  const processNextSolvingStep = () => {
+    console.log('Processing next solving step');
+    if (!game.solvingSteps || game.currentSolvingStepIndex >= game.solvingSteps.length) {
+      // All steps processed, stop solving
+      setGame((prevGame) => ({ ...prevGame, isSolving: false, solvingSteps: null }));
+      return;
+    }
+  
+    const step = game.solvingSteps[game.currentSolvingStepIndex];
+    const [backendColStr, backendRowStr, action] = step.split(',');
+    if (!backendRowStr || !backendColStr || !action) {
+      // Invalid step, proceed to next
+      setGame((prevGame) => ({
+        ...prevGame,
+        currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1,
+      }));
+      return;
+    }
+  
+    const backendRow = parseInt(backendRowStr);
+    const backendCol = parseInt(backendColStr);
+  
+    // Convert backend position to frontend position
+    const frontendRow = game.rows - backendRow - 1;
+    const frontendCol = backendCol;
+  
+    if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
+      const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
+      console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
+      handleRotatePiece(frontendRow, frontendCol, rotation);
+    } else {
+      const direction = action.toUpperCase();
+      // Map the direction to new row/column
+      let newRow = frontendRow;
+      let newCol = frontendCol;
+  
+      switch (direction) {
+        case 'NORTH':
+          newRow -= 1;
+          break;
+        case 'SOUTH':
+          newRow += 1;
+          break;
+        case 'EAST':
+          newCol += 1;
+          break;
+        case 'WEST':
+          newCol -= 1;
+          break;
+        case 'NORTH_EAST':
+          newRow -= 1;
+          newCol += 1;
+          break;
+        case 'NORTH_WEST':
+          newRow -= 1;
+          newCol -= 1;
+          break;
+        case 'SOUTH_EAST':
+          newRow += 1;
+          newCol += 1;
+          break;
+        case 'SOUTH_WEST':
+          newRow += 1;
+          newCol -= 1;
+          break;
+        default:
+          console.error(`Unknown direction: ${direction}`);
+          break;
+      }
+  
+      console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
+      handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
+    }
+  
+    // After handling the move, increment currentSolvingStepIndex
+    setGame((prevGame) => ({
+      ...prevGame,
+      currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1,
+    }));
+  };
+  
+  // Use useEffect to process steps when laser animation is not active
+  useEffect(() => {
+    console.log('Laser animation:', game.laserAnimating, 'Solving:', game.isSolving);
+    if (game.isSolving && !game.laserAnimating) {
+      processNextSolvingStep();
+    }
+  }, [game.laserAnimating, game.isSolving, game.solvingSteps]);
+  
+  
+  // Ensure the laser animation is triggered after each move/rotation
+  useEffect(() => {
+    if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) return;
+    const currentBoardState = game.gameHistory[game.currentMove].boardState;
+    animateLaser(currentBoardState);
+  }, [game.gameHistory, game.currentMove]);
+  
 
   useEffect(() => {
     if (!game.animateHistory) return;
@@ -985,7 +1018,7 @@ const Game: React.FC = () => {
             </DialogActions>
           </Dialog>
         </Stack>
-      ) : game.isSolving ? (
+      ) : game.callingApi ? (
         <Stack direction="column" alignItems="start">
           <Container>
             <Typography variant="h4" align="center" style={{ marginBottom: 25 }} fontWeight={500}>
