@@ -24,7 +24,6 @@ def solve_single_agent(starting_board, player_color, debug = False):
         winning_node.board.display_board()
     num_visited = TreeNode.num_nodes_made()
     print(f"Numer of visited nodes: {num_visited}")
-    print(f"Number of nodes made: {len(TreeNode.visited_boards)}")
     return winning_moves_list
 
     
@@ -43,7 +42,6 @@ def find_winning_node_single_agent(root, player_color):
 
         # Expand the current node
         possible_moves=current_node.board.get_all_possible_moves(player_color)
-        #print_moves(possible_moves)
 
         for move in possible_moves:
             child_board = current_node.board.make_move(move, check_allowed=True)

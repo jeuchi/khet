@@ -16,6 +16,6 @@ def solve():
     solution_str = ""
     for move in solution:
         piece, action = move
-        move_str = f"{piece.color} {piece} at {piece.position} -> {action}"
+        move_str = f"{piece.position},{action}"
         solution_str += move_str + "\n"
     return solution_str

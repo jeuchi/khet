@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     board = parse_board_data(board_data)
 
-    solution = solve_single_agent(board, "Silver")
+    solution = solve_single_agent(board, "Silver", debug=False)
     print_moves(solution)
 
     #board.display_board()
