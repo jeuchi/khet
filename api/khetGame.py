@@ -71,13 +71,13 @@ class KhetGame:
 
 # Example usage
 if __name__ == "__main__":
-    data_folder = Path("boards/")
-    file = data_folder / "test-0.txt"
+    data_folder = Path("ui/src/assets/boards")
+    file = data_folder / "test-6.txt"
     board_data_str = open(file)
     board_data=json.load(board_data_str)
 
     board = parse_board_data(board_data)
-    board.display_board()
+
     solution = solve_single_agent(board, "Silver")
     print_moves(solution)
 

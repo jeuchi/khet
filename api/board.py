@@ -62,10 +62,14 @@ class Board:
             return False
         for i in range(self.m):
             for j in range(self.n):
-                if self.grid[i][j] != other.grid[i][j]:
+                if self.grid[j][i] != other.grid[j][i]:
                     return False
         return True
     
+    def __hash__(self):
+        piece_hashes = tuple((piece.color, piece.__class__.__name__, piece.position, piece.orientation) for piece in self.get_list_of_pieces())
+        return hash((self.m, self.n, piece_hashes))
+
     def deepcopy(self):
         new_list_of_pieces = []
         for piece in self.get_list_of_pieces():
@@ -158,7 +162,7 @@ class Board:
         ax.set_yticklabels([str(self.n - i - 1) for i in range(self.n)])
 
         plt.gca().invert_yaxis()
-        #plt.show()
+        plt.show()
 
     def get_grid_position(self, position):
         x, y = position

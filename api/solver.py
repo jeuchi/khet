@@ -5,7 +5,7 @@ from board import Board, parse_board_data, print_moves, print_move
 from collections import deque
 import os
 
-def solve_single_agent(starting_board, player_color):
+def solve_single_agent(starting_board, player_color, debug = False):
     # Create the root node
     root = TreeNode(starting_board)
     winning_node = find_winning_node_single_agent(root, player_color)
@@ -18,9 +18,13 @@ def solve_single_agent(starting_board, player_color):
         current_node = current_node.parent
 
     winning_moves_list = [*winning_moves]
-    winning_node.board.display_board()
+    if debug:
+        print("Winning moves:")
+        print_moves(winning_moves_list)
+        winning_node.board.display_board()
     num_visited = TreeNode.num_nodes_made()
     print(f"Numer of visited nodes: {num_visited}")
+    print(f"Number of nodes made: {len(TreeNode.visited_boards)}")
     return winning_moves_list
 
     
@@ -45,8 +49,8 @@ def find_winning_node_single_agent(root, player_color):
             child_board = current_node.board.make_move(move, check_allowed=True)
 
             piece_destroyed = child_board.fire_laser(player_color)
-            #if TreeNode.is_visited(child_board):
-                #continue
+            if TreeNode.is_visited(child_board):
+                continue
             child_node = TreeNode(child_board, current_node, move)
             if isinstance(piece_destroyed, Pharaoh) and piece_destroyed.color == opponent_color:
                 return child_node
@@ -54,7 +58,7 @@ def find_winning_node_single_agent(root, player_color):
             queue.append(child_node)
 
 class TreeNode:
-    visited_boards = []
+    visited_boards = set()
     nodes_made = 0
 
     def __init__(self, board, parent=None, move=None):
@@ -63,17 +67,20 @@ class TreeNode:
         self.children = []
         self.move = move
         TreeNode.nodes_made += 1  # Increment the counter when a node is created
+        TreeNode.add_visited_board(board)
 
     def add_child(self, child):
         self.children.append(child)
 
     @classmethod
     def add_visited_board(cls, board):
-        cls.visited_boards.append(board)
+        cls.visited_boards.add(board)
 
     @classmethod
     def is_visited(cls, board):
-        return board in cls.visited_boards
+        if board in cls.visited_boards:
+            return True
+        return False
     
     @classmethod
     def num_visited(cls):
