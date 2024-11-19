@@ -201,6 +201,15 @@ class Board:
             return False
         #add in forbidden space check
 
+        if piece.color == "Silver" and new_position[0] == 0:
+            return False
+        elif piece.color == "Red" and new_position[0] == self.m - 1:
+            return False
+        elif piece.color == "Silver" and (new_position == (self.m - 2, self.n - 1) or new_position == (self.m - 2, 0)):
+            return False
+        elif piece.color == "Red" and (new_position == (1, self.n - 1) or new_position == (1, 0)):
+            return False
+
         # Check if the new position is occupied by another piece of the same color
         next_position_piece = self.get_grid_position(new_position)
         if next_position_piece is None:
