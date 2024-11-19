@@ -482,7 +482,7 @@ const Board: React.FC<BoardProps> = ({
                             x2={getCoordinate(laserSegment.exit).x}
                             y2={getCoordinate(laserSegment.exit).y}
                             stroke="red"
-                            strokeWidth="2"
+                            strokeWidth="4"
                             strokeLinecap="round"
                           />
                         </svg>

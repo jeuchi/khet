@@ -1,3 +1,4 @@
 FLASK_APP=server.py
+FLASK_RUN_PORT=8080
 FLASK_ENV=development
 SCRIPT_NAME=/api

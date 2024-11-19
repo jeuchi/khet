@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: mode !== 'production' ? 'http://localhost:5000' : 'https://jeuchi.pythonanywhere.com/',
+          target: mode !== 'production' ? 'http://localhost:8080' : 'https://jeuchi.pythonanywhere.com/',
           changeOrigin: true
         }
       }
