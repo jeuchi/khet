@@ -804,11 +804,6 @@ const Game: React.FC = () => {
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
         Khet
       </Typography>
-      {game.gameOver && (
-        <Typography variant="h5" align="center" style={{ marginBottom: 25, color: 'red' }}>
-          Game Over
-        </Typography>
-      )}
       {game.editMode ? (
         <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems="start">
           <Board

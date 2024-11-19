@@ -22,6 +22,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
   return (
     <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
       <Typography variant="h6">Game History</Typography>
+      {game.gameOver && <Typography variant="body1" color="error">Game Over</Typography>}
       <FormGroup>
       <FormControlLabel control={<Switch checked={game.animateHistory} onChange={() => setGame((prevGame: Game) => ({ ...prevGame, animateHistory: !prevGame.animateHistory }))} />} label="Autoplay"/>
       </FormGroup>
