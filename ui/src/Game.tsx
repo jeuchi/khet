@@ -30,6 +30,7 @@ import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 import BuildingBlocks from './assets/building-blocks.gif';
 import { isMobile } from 'react-device-detect';
+import { toast } from 'react-toastify';
 import test0 from './assets/boards/test-0.txt';
 import test1 from './assets/boards/test-1.txt';
 import test2 from './assets/boards/test-2.txt';
@@ -87,6 +88,7 @@ export interface Game {
   }[];
   laserAnimating: boolean;
   boardSelectionOpen: boolean;
+  animateHistory: boolean;
 }
 
 // Direction vectors
@@ -130,7 +132,8 @@ const Game: React.FC = () => {
     isSolving: false,
     laserPath: [],
     laserAnimating: false,
-    boardSelectionOpen: false
+    boardSelectionOpen: false,
+    animateHistory: false
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -686,93 +689,115 @@ const Game: React.FC = () => {
       // Loop through each step in the solution, find the piece position in () and the direction after ->
       solution.split('\n').forEach((step: string) => {
         // Extract the piece position (n, m)
-        const positionMatch = step.match(/\((\d+),\s*(\d+)\)/);
-        if (positionMatch) {
-          const backendCol = parseInt(positionMatch[1], 10);
-          const backendRow = parseInt(positionMatch[2], 10);
+        if (!step || step.length === 0) {
+          return;
+        }
 
-          console.log(`Backend position: (${backendRow}, ${backendCol})`);
+        const [backendColStr, backendRowStr, action] = step.split(',');
+        if (!backendRowStr || !backendColStr || !action) {
+          return;
+        }
 
-          // Convert backend position to frontend position
-          const frontendRow = game.rows - backendRow - 1;
-          const frontendCol = backendCol;
+        const backendRow = parseInt(backendRowStr);
+        const backendCol = parseInt(backendColStr);
 
-          // Extract the action after '->'
-          const actionMatch = step.match(/->\s*(.*)/);
-          if (actionMatch) {
-            const action = actionMatch[1].trim();
+        // Convert backend position to frontend position
+        const frontendRow = game.rows - backendRow - 1;
+        const frontendCol = backendCol;
 
-            // Check if the action is a rotation or a direction
-            if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
-              const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
-              // Handle rotation
-              console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
-              handleRotatePiece(frontendRow, frontendCol, rotation);
-            } else {
-              const direction = action.toUpperCase();
-              // Map the direction to new row/column
-              let newRow = frontendRow;
-              let newCol = frontendCol;
-
-              switch (direction) {
-                case 'NORTH':
-                  newRow -= 1;
-                  break;
-                case 'SOUTH':
-                  newRow += 1;
-                  break;
-                case 'EAST':
-                  newCol += 1;
-                  break;
-                case 'WEST':
-                  newCol -= 1;
-                  break;
-                case 'NORTH_EAST':
-                  newRow -= 1;
-                  newCol += 1;
-                  break;
-                case 'NORTH_WEST':
-                  newRow -= 1;
-                  newCol -= 1;
-                  break;
-                case 'SOUTH_EAST':
-                  newRow += 1;
-                  newCol += 1;
-                  break;
-                case 'SOUTH_WEST':
-                  newRow += 1;
-                  newCol -= 1;
-                  break;
-                default:
-                  console.error(`Unknown direction: ${direction}`);
-                  break;
-              }
-
-              console.log(
-                `Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`
-              );
-              // You can call your movement function here
-              handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
-            }
-          }
+        // Check if the action is a rotation or a direction
+        if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
+          const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
+          // Handle rotation
+          console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
+          handleRotatePiece(frontendRow, frontendCol, rotation);
         } else {
-          console.error(`Could not parse position from step: ${step}`);
+          const direction = action.toUpperCase();
+          // Map the direction to new row/column
+          let newRow = frontendRow;
+          let newCol = frontendCol;
+
+          switch (direction) {
+            case 'NORTH':
+              newRow -= 1;
+              break;
+            case 'SOUTH':
+              newRow += 1;
+              break;
+            case 'EAST':
+              newCol += 1;
+              break;
+            case 'WEST':
+              newCol -= 1;
+              break;
+            case 'NORTH_EAST':
+              newRow -= 1;
+              newCol += 1;
+              break;
+            case 'NORTH_WEST':
+              newRow -= 1;
+              newCol -= 1;
+              break;
+            case 'SOUTH_EAST':
+              newRow += 1;
+              newCol += 1;
+              break;
+            case 'SOUTH_WEST':
+              newRow += 1;
+              newCol -= 1;
+              break;
+            default:
+              console.error(`Unknown direction: ${direction}`);
+              break;
+          }
+
+          console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
+          // You can call your movement function here
+          handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
         }
       });
-    } catch (error) {
-      // TODO
-      console.error(error);
-    }
 
-    setGame((prevGame: Game) => ({
-      ...prevGame,
-      isSolving: false,
-      currentMove: 0,
-      lastMove: { from: prevGame.gameHistory[0].from, to: prevGame.gameHistory[0].to },
-      boardState: prevGame.gameHistory[0].boardState,
-      rotationAngles: prevGame.gameHistory[0].rotationAngles
-    }));
+      setGame((prevGame: Game) => ({
+        ...prevGame,
+        isSolving: false,
+        currentMove: 0,
+        lastMove: { from: prevGame.gameHistory[0].from, to: prevGame.gameHistory[0].to },
+        boardState: prevGame.gameHistory[0].boardState,
+        rotationAngles: prevGame.gameHistory[0].rotationAngles,
+        animateHistory: true,
+        gameOver: true
+      }));
+    } catch (error) {
+      setGame((prevGame) => ({ ...prevGame, isSolving: false }));
+      toast('Error solving the game');
+    }
   };
+
+  useEffect(() => {
+    if (!game.animateHistory) return;
+    const interval = setInterval(() => {
+      setGame((prevGame) => {
+        const nextMove = prevGame.currentMove + 1;
+        if (nextMove >= prevGame.gameHistory.length) {
+          clearInterval(interval);
+          return { ...prevGame, animateHistory: false };
+        }
+
+        const nextBoardState = prevGame.gameHistory[nextMove].boardState;
+        return {
+          ...prevGame,
+          currentMove: nextMove,
+          lastMove: {
+            from: prevGame.gameHistory[nextMove].from,
+            to: prevGame.gameHistory[nextMove].to
+          },
+          boardState: nextBoardState,
+          rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
+        };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [game.animateHistory]);
 
   return (
     <Stack>
