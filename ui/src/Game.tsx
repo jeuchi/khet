@@ -31,6 +31,8 @@ import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 import BuildingBlocks from './assets/building-blocks.gif';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
+
 import test0 from './assets/boards/test-0.txt';
 import test1 from './assets/boards/test-1.txt';
 import test2 from './assets/boards/test-2.txt';
@@ -455,18 +457,18 @@ const Game: React.FC = () => {
                 LASER_SPEED * 5
               );
             } else {
-                // Anubis is dead, remove it from the board
-                setGame((prevGame) => {
+              // Anubis is dead, remove it from the board
+              setGame((prevGame) => {
                 const newBoardState = currentBoardState.map((r) => r.slice());
                 newBoardState[y][x] = null;
-                
+
                 return {
                   ...prevGame,
                   boardState: newBoardState,
                   laserPath: [],
-                  laserAnimating: false,
+                  laserAnimating: false
                 };
-                });
+              });
             }
           } else {
             // Piece is dead, remove it from the board
@@ -676,23 +678,22 @@ const Game: React.FC = () => {
     reader.readAsText(file);
   };
 
-
   const solveGame = async () => {
     setGame((prevGame) => ({ ...prevGame, callingApi: true }));
 
     try {
       const res = await axios.post('/solve', {
-        board: game.boardState.map((r) => r.map((c) => (c ? c : ' '))),
+        board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
       });
-  
+
       const solution = res.data;
       if (!solution) {
         console.error('No solution found.');
         return;
       }
-  
-      const steps = solution.split('\n').filter((step:string) => step && step.length > 0);
-  
+
+      const steps = solution.split('\n').filter((step: string) => step && step.length > 0);
+
       // Set the solving steps and start index
       setGame((prevGame) => ({
         ...prevGame,
@@ -706,7 +707,7 @@ const Game: React.FC = () => {
       toast('Error solving the game');
     }
   };
-  
+
   // Define a function to process the next step
   const processNextSolvingStep = () => {
     console.log('Processing next solving step');
@@ -715,25 +716,25 @@ const Game: React.FC = () => {
       setGame((prevGame) => ({ ...prevGame, isSolving: false, solvingSteps: null }));
       return;
     }
-  
+
     const step = game.solvingSteps[game.currentSolvingStepIndex];
     const [backendColStr, backendRowStr, action] = step.split(',');
     if (!backendRowStr || !backendColStr || !action) {
       // Invalid step, proceed to next
       setGame((prevGame) => ({
         ...prevGame,
-        currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1,
+        currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1
       }));
       return;
     }
-  
+
     const backendRow = parseInt(backendRowStr);
     const backendCol = parseInt(backendColStr);
-  
+
     // Convert backend position to frontend position
     const frontendRow = game.rows - backendRow - 1;
     const frontendCol = backendCol;
-  
+
     if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
       const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
       console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
@@ -743,7 +744,7 @@ const Game: React.FC = () => {
       // Map the direction to new row/column
       let newRow = frontendRow;
       let newCol = frontendCol;
-  
+
       switch (direction) {
         case 'NORTH':
           newRow -= 1;
@@ -777,18 +778,18 @@ const Game: React.FC = () => {
           console.error(`Unknown direction: ${direction}`);
           break;
       }
-  
+
       console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
       handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
     }
-  
+
     // After handling the move, increment currentSolvingStepIndex
     setGame((prevGame) => ({
       ...prevGame,
-      currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1,
+      currentSolvingStepIndex: prevGame.currentSolvingStepIndex + 1
     }));
   };
-  
+
   // Use useEffect to process steps when laser animation is not active
   useEffect(() => {
     console.log('Laser animation:', game.laserAnimating, 'Solving:', game.isSolving);
@@ -796,15 +797,13 @@ const Game: React.FC = () => {
       processNextSolvingStep();
     }
   }, [game.laserAnimating, game.isSolving, game.solvingSteps]);
-  
-  
+
   // Ensure the laser animation is triggered after each move/rotation
   useEffect(() => {
     if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) return;
     const currentBoardState = game.gameHistory[game.currentMove].boardState;
     animateLaser(currentBoardState);
   }, [game.gameHistory, game.currentMove]);
-  
 
   useEffect(() => {
     if (!game.animateHistory) return;
@@ -838,7 +837,12 @@ const Game: React.FC = () => {
         Khet
       </Typography>
       {game.editMode ? (
-        <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems="start">
+        <Stack
+          direction={isMobile ? 'column' : 'row'}
+          spacing={2}
+          alignItems="start"
+          justifyContent={'center'}
+        >
           <Board
             game={game}
             onMovePiece={handleMovePiece}
@@ -849,7 +853,7 @@ const Game: React.FC = () => {
 
           <Paper elevation={20} sx={{ borderRadius: 5 }}>
             <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
-              <Stack direction="row" justifyContent={'space-evenly'}>
+              <Stack direction="column" justifyContent={'space-evenly'}>
                 <TextField
                   label="Rows"
                   type="number"
@@ -1021,17 +1025,52 @@ const Game: React.FC = () => {
       ) : game.callingApi ? (
         <Stack direction="column" alignItems="start">
           <Container>
-            <Typography variant="h4" align="center" style={{ marginBottom: 25 }} fontWeight={500}>
-              Solving...
-            </Typography>
-            <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '100%' }} />.
+            <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '50%' }} />.
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{
+              duration: 0.75,
+              repeat: Infinity,
+              repeatDelay: 1
+              }}
+              style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            >
+              {Array.from('Solving...').map((el: string, i: number) => (
+              <motion.span
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: [0, -10, 0] }}
+                transition={{
+                duration: 0.75,
+                delay: i * 0.1,
+                repeat: Infinity,
+                repeatDelay: 1
+                }}
+                key={i}
+              >
+                <Typography
+                variant="h4"
+                align="center"
+                style={{ marginBottom: 25 }}
+                fontWeight={700}
+                >
+                {el}
+                </Typography>
+              </motion.span>
+              ))}
+            </motion.div>
           </Container>
         </Stack>
       ) : (
-        <Stack direction={isMobile ? 'column' : 'row'} alignItems="start" spacing={2}>
+        <Stack
+          direction={isMobile ? 'column' : 'row'}
+          alignItems="start"
+          spacing={2}
+          justifyContent={'center'}
+        >
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '100%', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ width: '350px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 

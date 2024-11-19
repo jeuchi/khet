@@ -296,8 +296,7 @@ const Board: React.FC<BoardProps> = ({
   }, [game.boardState]);
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" width="100%">
-      <Box width="100vw" maxWidth="800px">
+      <Box width="650px" sx={{height: '50px'}}>
         <Grid container spacing={0} columns={columns}>
           {game.boardState.map((row, rowIndex) =>
             row.map((cellValue, colIndex) => {
@@ -495,7 +494,6 @@ const Board: React.FC<BoardProps> = ({
           )}
         </Grid>
       </Box>
-    </Box>
   );
 };
 

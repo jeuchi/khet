@@ -26,7 +26,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
       <FormGroup>
       <FormControlLabel disabled={game.isSolving} control={<Switch checked={game.animateHistory} onChange={() => setGame((prevGame: Game) => ({ ...prevGame, animateHistory: !prevGame.animateHistory }))} />} label="Autoplay"/>
       </FormGroup>
-      <TableContainer component={Paper} sx={{ width: '350px', height: 400 }}>
+      <TableContainer component={Paper} sx={{ width: '300px', height: 415 }}>
         <Table aria-label="game history table">
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (
