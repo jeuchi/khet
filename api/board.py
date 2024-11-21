@@ -123,6 +123,40 @@ class Board:
         hit_piece = self.get_grid_position((x, y))
         self.set_grid_position(None, (x, y))
         return hit_piece
+    
+    def get_actionable_spaces(self, color):
+        Sphynx = self.get_sphynx(color)
+        if Sphynx is None:
+            return None
+        
+        x, y = Sphynx.get_position()
+        laser_direction = Sphynx.get_laser_direction()
+
+        laser_traveling = True
+        actionable_spaces = []
+
+        while laser_traveling:
+            x += laser_direction.value[0]
+            y += laser_direction.value[1]
+            actionable_spaces.append((x, y))
+
+            # Check if the laser has left the board
+            if not (0 <= x < self.m and 0 <= y < self.n):
+                break
+            #print(f"Evaluating ({x}, {y})")
+            piece = self.get_grid_position((x, y))
+            if piece is not None:
+                surface_hit = piece.get_surface_hit(laser_direction)
+                #print(f"Surface hit: {surface_hit} on {piece} at ({x}, {y})")
+                if surface_hit == surface.BLOCKER or surface_hit == surface.EMIT_LASER:
+                    break
+                elif surface_hit == surface.REFLECT_CW or surface_hit == surface.REFLECT_CCW:
+                    laser_direction = piece.reflect_laser(laser_direction)
+                    #print(f"Reflecting to {laser_direction}")
+                else: # surface_hit should be vunerable
+                    laser_traveling = False
+        
+        return actionable_spaces
 
     def get_sphynx(self, color):
         for row in self.grid:
