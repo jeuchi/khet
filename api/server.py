@@ -6,6 +6,22 @@ from board import Board, parse_board_data
 
 app = Flask(__name__)
 
+@app.route('/api/next-best-move', methods=['POST'])
+def next_best_move():
+    data = request.json
+    board_data = data['board']
+    try :
+        board = parse_board_data(board_data)
+    except:
+        return ('Invalid board data', 400)
+    # Implement your next best move logic here
+
+    # If not solvable, return 400
+    time.sleep(1)
+
+    # Otherwise, return string of the next best move
+    return ('Note to self: Implement next best move logic', 404)
+
 @app.route('/api/solve', methods=['POST'])
 def solve():
     data = request.json 

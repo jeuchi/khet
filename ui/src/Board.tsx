@@ -166,7 +166,7 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    if (game.laserAnimating || game.gameOver) {
+    if (game.laserAnimating || game.gameOver || game.isLookingAtHistory) {
       return;
     }
 
@@ -188,7 +188,7 @@ const Board: React.FC<BoardProps> = ({
         }
       } else {
         const piece = Pieces[cellValue];
-        if (piece && piece.moveList) {
+        if (piece && piece.moveList && game.turn === cellValue.split('_')[0]) {
           // Select the piece and show possible moves
           setSelectedPiece({ row, col });
           if (piece.moveList) {
@@ -296,110 +296,116 @@ const Board: React.FC<BoardProps> = ({
   }, [game.boardState]);
 
   return (
-      <Box width="650px" sx={{height: '50px'}}>
-        <Grid container spacing={0} columns={columns}>
-          {game.boardState.map((row, rowIndex) =>
-            row.map((cellValue, colIndex) => {
-              // Split the cellValue by comma
-              let piece: PieceType | null = null;
-              let direction = 'up';
-              let pieceStr = '';
+    <Box width="650px" sx={{ height: '50px' }}>
+      <Grid container spacing={0} columns={columns}>
+        {game.boardState.map((row, rowIndex) =>
+          row.map((cellValue, colIndex) => {
+            // Split the cellValue by comma
+            let piece: PieceType | null = null;
+            let direction = 'up';
+            let pieceStr = '';
 
-              let canRotate = true;
+            if (cellValue !== null) {
+              [pieceStr, direction] = cellValue.split(',').map((part) => part.trim());
+              piece = pieceStr as PieceType;
+            }
 
-              if (cellValue !== null) {
-                [pieceStr, direction] = cellValue.split(',').map((part) => part.trim());
-                piece = pieceStr as PieceType;
-              }
+            let isTurn =
+              game.turn === pieceStr.split('_')[0] && !game.animateHistory && !game.laserAnimating;
+            let borderRadius = '0';
 
-              let borderRadius = '0';
+            const laserSegment = game.laserPath.find(
+              (pos) => pos.row === rowIndex && pos.col === colIndex
+            );
 
-              const laserSegment = game.laserPath.find(
-                (pos) => pos.row === rowIndex && pos.col === colIndex
-              );
+            if (rowIndex === 0 && colIndex === 0) {
+              borderRadius = '16px 0 0 0';
+            } else if (rowIndex === 0 && colIndex === columns - 1) {
+              borderRadius = '0 16px 0 0';
+            } else if (rowIndex === rows - 1 && colIndex === 0) {
+              borderRadius = '0 0 0 16px';
+            } else if (rowIndex === rows - 1 && colIndex === columns - 1) {
+              borderRadius = '0 0 16px 0';
+            }
 
-              if (rowIndex === 0 && colIndex === 0) {
-                borderRadius = '16px 0 0 0';
-              } else if (rowIndex === 0 && colIndex === columns - 1) {
-                borderRadius = '0 16px 0 0';
-              } else if (rowIndex === rows - 1 && colIndex === 0) {
-                borderRadius = '0 0 0 16px';
-              } else if (rowIndex === rows - 1 && colIndex === columns - 1) {
-                borderRadius = '0 0 16px 0';
-              }
+            const isPossibleMove = possibleMoves.some(
+              (move) => move.row === rowIndex && move.col === colIndex
+            );
 
-              const isPossibleMove = possibleMoves.some(
-                (move) => move.row === rowIndex && move.col === colIndex
-              );
+            // Get rotation angle from state or default
+            const cellKey = `${rowIndex}-${colIndex}`;
+            let rotation = game.rotationAngles[cellKey];
 
-              // Get rotation angle from state or default
-              const cellKey = `${rowIndex}-${colIndex}`;
-              let rotation = game.rotationAngles[cellKey];
+            if (rotation === undefined) {
+              rotation = DIRECTION_TO_ROTATION[direction] || 0;
+            }
 
-              if (rotation === undefined) {
-                rotation = DIRECTION_TO_ROTATION[direction] || 0;
-              }
+            return (
+              <Grid item xs={1} key={`${rowIndex}-${colIndex}`}>
+                <Cell
+                  style={{
+                    cursor:
+                      !piece && game.editMode
+                        ? 'pointer'
+                        : piece && !game.editMode
+                        ? 'grab'
+                        : 'default',
+                    borderRadius,
+                    backgroundColor:
+                      game.lastMove?.from.row === rowIndex && game.lastMove?.from.col === colIndex
+                        ? LAST_MOVE_FROM_COLOR
+                        : game.lastMove?.to.row === rowIndex && game.lastMove?.to.col === colIndex
+                        ? LAST_MOVE_TO_COLOR
+                        : isAnkhSpace(rowIndex, colIndex)
+                        ? CELL_COLOR_ANKH
+                        : isEyeSpace(rowIndex, colIndex)
+                        ? CELL_COLOR_EYE
+                        : CELL_COLOR_MAIN
+                  }}
+                  onClick={() => handleCellClick(rowIndex, colIndex, piece)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
+                >
+                  <CellContent>
+                    {/* Render Row Labels on the leftmost cells */}
+                    {colIndex === 0 && (
+                      <CellLabel style={{ top: 4, left: 4 }}>{rowLabels[rowIndex]}</CellLabel>
+                    )}
+                    {/* Render Column Labels on the bottommost cells */}
+                    {rowIndex === rows - 1 && (
+                      <CellLabel style={{ bottom: 4, right: 4 }}>
+                        {columnLabels[colIndex]}
+                      </CellLabel>
+                    )}
 
-              return (
-                <Grid item xs={1} key={`${rowIndex}-${colIndex}`}>
-                  <Cell
-                    style={{
-                      cursor:
-                        !piece && game.editMode
-                          ? 'pointer'
-                          : piece && !game.editMode
-                          ? 'grab'
-                          : 'default',
-                      borderRadius,
-                      backgroundColor:
-                        game.lastMove?.from.row === rowIndex && game.lastMove?.from.col === colIndex
-                          ? LAST_MOVE_FROM_COLOR
-                          : game.lastMove?.to.row === rowIndex && game.lastMove?.to.col === colIndex
-                          ? LAST_MOVE_TO_COLOR
-                          : isAnkhSpace(rowIndex, colIndex)
-                          ? CELL_COLOR_ANKH
-                          : isEyeSpace(rowIndex, colIndex)
-                          ? CELL_COLOR_EYE
-                          : CELL_COLOR_MAIN
-                    }}
-                    onClick={() => handleCellClick(rowIndex, colIndex, piece)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
-                  >
-                    <CellContent>
-                      {/* Render Row Labels on the leftmost cells */}
-                      {colIndex === 0 && (
-                        <CellLabel style={{ top: 4, left: 4 }}>{rowLabels[rowIndex]}</CellLabel>
-                      )}
-                      {/* Render Column Labels on the bottommost cells */}
-                      {rowIndex === rows - 1 && (
-                        <CellLabel style={{ bottom: 4, right: 4 }}>
-                          {columnLabels[colIndex]}
-                        </CellLabel>
-                      )}
+                    {piece && (
+                      <>
+                        <Sprite
+                          src={Pieces[piece].image}
+                          alt={`Piece at ${rowIndex},${colIndex}`}
+                          draggable={
+                            !game.editMode &&
+                            !game.laserAnimating &&
+                            isTurn &&
+                            !game.isLookingAtHistory
+                          }
+                          onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
+                          onDragEnd={handleDragEnd}
+                          sx={{
+                            transform: `rotate(${rotation}deg) ${
+                              selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
+                                ? 'scale(1.3)'
+                                : ''
+                            }`,
+                            position: 'relative'
+                          }}
+                        />
+                        {game.editMode && (
+                          <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
+                        )}
 
-                      {piece && (
-                        <>
-                          <Sprite
-                            src={Pieces[piece].image}
-                            alt={`Piece at ${rowIndex},${colIndex}`}
-                            draggable={!game.editMode || game.laserAnimating}
-                            onDragStart={(e) => handleDragStart(e, rowIndex, colIndex, piece)}
-                            onDragEnd={handleDragEnd}
-                            sx={{
-                              transform: `rotate(${rotation}deg) ${
-                                selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
-                                  ? 'scale(1.3)'
-                                  : ''
-                              }`,
-                              position: 'relative'
-                            }}
-                          />
-                          {game.editMode && (
-                            <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
-                          )}
-
-                          {canRotate && (
+                        {isTurn ||
+                          (game.editMode && (
                             <div
                               style={{
                                 position: 'absolute',
@@ -423,77 +429,77 @@ const Board: React.FC<BoardProps> = ({
                                 style={{ cursor: 'pointer' }}
                               />
                             </div>
-                          )}
-                        </>
-                      )}
-                      {!piece && game.editMode && <AddPieceIcon />}
-                      {isPossibleMove && <MoveHighlight />}
+                          ))}
+                      </>
+                    )}
+                    {!piece && game.editMode && <AddPieceIcon />}
+                    {isPossibleMove && <MoveHighlight />}
 
-                      {isAnkhSpace(rowIndex, colIndex) && (
-                        <Sprite
-                          src={SilverAnkh}
-                          alt="Silver Ankh"
-                          sx={{ position: 'absolute', left: '10px', top: '10px' }}
-                          width={'20%'}
-                          height={'20%'}
+                    {isAnkhSpace(rowIndex, colIndex) && (
+                      <Sprite
+                        src={SilverAnkh}
+                        alt="Silver Ankh"
+                        sx={{ position: 'absolute', left: '10px', top: '10px' }}
+                        width={'20%'}
+                        height={'20%'}
+                      />
+                    )}
+
+                    {isEyeSpace(rowIndex, colIndex) && (
+                      <Sprite
+                        src={RedEye}
+                        alt="Red Eye"
+                        sx={{ position: 'absolute', left: '10px', top: '10px' }}
+                        width={'20%'}
+                        height={'20%'}
+                      />
+                    )}
+
+                    {laserSegment && (
+                      <svg
+                        width="100%"
+                        height="100%"
+                        viewBox="0 0 100 100"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                      >
+                        <defs>
+                          <filter id="glow">
+                            <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                            <feMerge>
+                              <feMergeNode in="coloredBlur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+                        <line
+                          x1={getCoordinate(laserSegment.entry).x}
+                          y1={getCoordinate(laserSegment.entry).y}
+                          x2={50}
+                          y2={50}
+                          stroke="red"
+                          strokeWidth="4"
+                          strokeLinecap="round"
                         />
-                      )}
-
-                      {isEyeSpace(rowIndex, colIndex) && (
-                        <Sprite
-                          src={RedEye}
-                          alt="Red Eye"
-                          sx={{ position: 'absolute', left: '10px', top: '10px' }}
-                          width={'20%'}
-                          height={'20%'}
+                        <line
+                          x1={50}
+                          y1={50}
+                          x2={getCoordinate(laserSegment.exit).x}
+                          y2={getCoordinate(laserSegment.exit).y}
+                          stroke="red"
+                          strokeWidth="4"
+                          strokeLinecap="round"
                         />
-                      )}
-
-                      {laserSegment && (
-                        <svg
-                          width="100%"
-                          height="100%"
-                          viewBox="0 0 100 100"
-                          xmlns="http://www.w3.org/2000/svg"
-                          style={{ position: 'absolute', top: 0, left: 0 }}
-                        >
-                          <defs>
-                            <filter id="glow">
-                              <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
-                              <feMerge>
-                                <feMergeNode in="coloredBlur" />
-                                <feMergeNode in="SourceGraphic" />
-                              </feMerge>
-                            </filter>
-                          </defs>
-                          <line
-                            x1={getCoordinate(laserSegment.entry).x}
-                            y1={getCoordinate(laserSegment.entry).y}
-                            x2={50}
-                            y2={50}
-                            stroke="red"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1={50}
-                            y1={50}
-                            x2={getCoordinate(laserSegment.exit).x}
-                            y2={getCoordinate(laserSegment.exit).y}
-                            stroke="red"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      )}
-                    </CellContent>
-                  </Cell>
-                </Grid>
-              );
-            })
-          )}
-        </Grid>
-      </Box>
+                      </svg>
+                    )}
+                  </CellContent>
+                </Cell>
+              </Grid>
+            );
+          })
+        )}
+      </Grid>
+    </Box>
   );
 };
 
