@@ -1,6 +1,6 @@
 import time
 from flask import Flask, request
-from solver import solve_single_agent
+from solver import *
 from board import Board, parse_board_data
 
 
