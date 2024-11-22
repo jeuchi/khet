@@ -1,6 +1,6 @@
 from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, create_piece_from_str
 from board import Board, parse_board_data, print_moves
-from solver import solve_single_agent
+from solver import *
 import json
 from pathlib import Path
 
@@ -72,13 +72,14 @@ class KhetGame:
 # Example usage
 if __name__ == "__main__":
     data_folder = Path("ui/src/assets/boards")
-    file = data_folder / "test-6.txt"
+    file = data_folder / "test_mate_1.txt"
     board_data_str = open(file)
     board_data=json.load(board_data_str)
 
     board = parse_board_data(board_data)
 
-    solution = solve_single_agent(board, "Silver", debug=True)
+    solver = Solver(board, "Silver")
+    solution = solver.solve_multi_agent(board, "Silver")
     print_moves(solution)
 
     #board.display_board()

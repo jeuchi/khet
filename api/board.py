@@ -295,6 +295,7 @@ class Board:
     
     def get_all_possible_moves(self, color):
         possible_moves = []
+        possible_moves.append((None, action.PASS))
         for piece in self.get_list_of_pieces():
             if piece.color == color:
                 for move in self.list_possible_moves(piece):
