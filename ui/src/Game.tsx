@@ -94,6 +94,11 @@ export interface Game {
   currentSolvingStepIndex: number;
   isSolving: boolean;
   callingApi: boolean;
+  ai: boolean;
+  turn: 'silver' | 'red';
+  isLookingAtHistory: boolean;
+  callingNextMove: boolean;
+  winner: 'silver' | 'red' | null;
 }
 
 // Direction vectors
@@ -141,7 +146,12 @@ const Game: React.FC = () => {
     solvingSteps: null,
     currentSolvingStepIndex: 0,
     isSolving: false,
-    callingApi: false
+    callingApi: false,
+    ai: false,
+    turn: 'silver',
+    isLookingAtHistory: false,
+    callingNextMove: false,
+    winner: null
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -230,7 +240,9 @@ const Game: React.FC = () => {
         laserAnimating: false,
         selectedCell: null,
         pieceSelectionOpen: false,
-        isSolving: false
+        isSolving: false,
+        turn: 'silver',
+        winner: null
       };
     });
   };
@@ -311,14 +323,15 @@ const Game: React.FC = () => {
     if (game.editMode) return;
 
     // Find the 'bl' piece on the board
-    let silverSphinxPos = null;
+    let sphinxPos = null;
     let direction = 'up';
+    let sphinx = game.currentMove % 2 === 0 ? 'silver_sphinx' : 'red_sphinx';
 
     for (let i = 0; i < currentBoardState.length; i++) {
       for (let j = 0; j < currentBoardState[i].length; j++) {
         const cell = currentBoardState[i][j];
-        if (cell && cell.startsWith('silver_sphinx')) {
-          silverSphinxPos = { row: i, col: j };
+        if (cell && cell.startsWith(sphinx)) {
+          sphinxPos = { row: i, col: j };
           // Extract rotation if any
           const parts = cell.split(',');
           if (parts.length > 1) {
@@ -327,13 +340,13 @@ const Game: React.FC = () => {
           break;
         }
       }
-      if (silverSphinxPos) {
+      if (sphinxPos) {
         break;
       }
     }
 
-    if (!silverSphinxPos) {
-      console.error('No silver sphinx found on the board.');
+    if (!sphinxPos) {
+      console.error(`No ${sphinx} found on the board.`);
       return;
     }
 
@@ -345,16 +358,16 @@ const Game: React.FC = () => {
       exit: string; // Exit direction from the cell
     }[] = [];
 
-    let x = silverSphinxPos.col;
-    let y = silverSphinxPos.row;
+    let x = sphinxPos.col;
+    let y = sphinxPos.row;
     let currentDirection = direction;
     let steps = 0;
     const maxSteps = 100; // To prevent infinite loops
 
     // Add the initial segment from the laser source
     path.push({
-      row: silverSphinxPos.row,
-      col: silverSphinxPos.col,
+      row: sphinxPos.row,
+      col: sphinxPos.col,
       entry: '', // The laser starts moving in the initial direction
       exit: direction
     });
@@ -374,7 +387,13 @@ const Game: React.FC = () => {
       if (x < 0 || x >= currentBoardState[0].length || y < 0 || y >= currentBoardState.length) {
         // Laser is out of bounds, end animation
         setTimeout(
-          () => setGame((prevGame) => ({ ...prevGame, laserAnimating: false, laserPath: [] })),
+          () =>
+            setGame((prevGame) => ({
+              ...prevGame,
+              laserAnimating: false,
+              laserPath: [],
+              turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
+            })),
           LASER_SPEED * 5
         );
         return;
@@ -388,7 +407,7 @@ const Game: React.FC = () => {
         pieceDirection = 'up';
       }
 
-      console.log('Piece at', { row: y, col: x }, 'is', piece, 'Direction:', pieceDirection);
+      //console.log('Piece at', { row: y, col: x }, 'is', piece, 'Direction:', pieceDirection);
 
       if (piece && piece !== '') {
         // Determine new direction based on piece type
@@ -419,7 +438,9 @@ const Game: React.FC = () => {
               ...prevGame,
               laserPath: [...path],
               gameOver: true,
-              laserAnimating: false
+              laserAnimating: false,
+              turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver',
+              winner: piece === 'red_pharaoh' ? 'silver' : 'red'
             }));
           } else if (piece === 'red_sphinx' || piece === 'silver_sphinx') {
             // Sphinx can't be destroyed by the laser
@@ -443,7 +464,6 @@ const Game: React.FC = () => {
               (anubisDirection === 'down' && currentDirection === 'right') ||
               (anubisDirection === 'left' && currentDirection === 'down')
             ) {
-              console.log('Anubis absorbed the laser');
               // Anubis absorbed the laser
               path.push({
                 row: y,
@@ -466,7 +486,8 @@ const Game: React.FC = () => {
                   ...prevGame,
                   boardState: newBoardState,
                   laserPath: [],
-                  laserAnimating: false
+                  laserAnimating: false,
+                  turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
                 };
               });
             }
@@ -478,7 +499,8 @@ const Game: React.FC = () => {
             setGame((prevGame) => ({
               ...prevGame,
               boardState: newBoardState,
-              laserAnimating: false
+              laserAnimating: false,
+              turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
             }));
           }
         }
@@ -499,7 +521,11 @@ const Game: React.FC = () => {
     };
 
     // Start the laser movement
-    setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: true }));
+    setGame((prevGame) => ({
+      ...prevGame,
+      laserPath: [...path],
+      laserAnimating: true
+    }));
     setTimeout(step, LASER_SPEED);
   };
 
@@ -510,7 +536,7 @@ const Game: React.FC = () => {
   ): string | null => {
     const rotation = DIRECTION_TO_ROTATION[direction] || 0;
 
-    console.log('Piece:', pieceType, 'Direction:', incomingDirection, 'Rotation:', rotation);
+    //console.log('Piece:', pieceType, 'Direction:', incomingDirection, 'Rotation:', rotation);
 
     switch (pieceType) {
       case 'red_pyramid':
@@ -710,7 +736,6 @@ const Game: React.FC = () => {
 
   // Define a function to process the next step
   const processNextSolvingStep = () => {
-    console.log('Processing next solving step');
     if (!game.solvingSteps || game.currentSolvingStepIndex >= game.solvingSteps.length) {
       // All steps processed, stop solving
       setGame((prevGame) => ({ ...prevGame, isSolving: false, solvingSteps: null }));
@@ -737,7 +762,7 @@ const Game: React.FC = () => {
 
     if (action === 'ROTATE_CCW' || action === 'ROTATE_CW') {
       const rotation = action === 'ROTATE_CCW' ? 'left' : 'right';
-      console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
+      //console.log(`Rotate piece at (${frontendRow}, ${frontendCol}) to the ${rotation}`);
       handleRotatePiece(frontendRow, frontendCol, rotation);
     } else {
       const direction = action.toUpperCase();
@@ -779,7 +804,7 @@ const Game: React.FC = () => {
           break;
       }
 
-      console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
+      //console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
       handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
     }
 
@@ -792,7 +817,6 @@ const Game: React.FC = () => {
 
   // Use useEffect to process steps when laser animation is not active
   useEffect(() => {
-    console.log('Laser animation:', game.laserAnimating, 'Solving:', game.isSolving);
     if (game.isSolving && !game.laserAnimating) {
       processNextSolvingStep();
     }
@@ -800,10 +824,56 @@ const Game: React.FC = () => {
 
   // Ensure the laser animation is triggered after each move/rotation
   useEffect(() => {
-    if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) return;
+    if (game.currentMove >= game.gameHistory.length || game.gameHistory.length === 0) {
+      return;
+    }
+
     const currentBoardState = game.gameHistory[game.currentMove].boardState;
     animateLaser(currentBoardState);
   }, [game.gameHistory, game.currentMove]);
+
+  useEffect(() => {
+    if (game.currentMove < game.gameHistory.length - 1) {
+      setGame((prevGame) => ({
+        ...prevGame,
+        isLookingAtHistory: true
+      }));
+    } else {
+      setGame((prevGame) => ({
+        ...prevGame,
+        isLookingAtHistory: false
+      }));
+    }
+  }, [game.currentMove, game.gameHistory]);
+
+  // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
+  useEffect(() => {
+    const fetchNextMove = async () => {
+      if (!game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
+
+      setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
+
+      if (game.turn === 'red') {
+        try {
+          const res = await axios.post('/next-best-move', {
+            board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+          });
+
+          const move = res.data;
+          if (!move) {
+            toast('No next best move found!');
+            return;
+          }
+        } catch (error: any) {
+          toast(error.response.data);
+        }
+      }
+
+      setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
+    };
+
+    fetchNextMove();
+  }, [game.ai, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
     if (!game.animateHistory) return;
@@ -1030,33 +1100,33 @@ const Game: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{
-              duration: 0.75,
-              repeat: Infinity,
-              repeatDelay: 1
+                duration: 0.75,
+                repeat: Infinity,
+                repeatDelay: 1
               }}
               style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
             >
               {Array.from('Solving...').map((el: string, i: number) => (
-              <motion.span
-                initial={{ opacity: 0, y: 0 }}
-                animate={{ opacity: 1, y: [0, -10, 0] }}
-                transition={{
-                duration: 0.75,
-                delay: i * 0.1,
-                repeat: Infinity,
-                repeatDelay: 1
-                }}
-                key={i}
-              >
-                <Typography
-                variant="h4"
-                align="center"
-                style={{ marginBottom: 25 }}
-                fontWeight={700}
+                <motion.span
+                  initial={{ opacity: 0, y: 0 }}
+                  animate={{ opacity: 1, y: [0, -10, 0] }}
+                  transition={{
+                    duration: 0.75,
+                    delay: i * 0.1,
+                    repeat: Infinity,
+                    repeatDelay: 1
+                  }}
+                  key={i}
                 >
-                {el}
-                </Typography>
-              </motion.span>
+                  <Typography
+                    variant="h4"
+                    align="center"
+                    style={{ marginBottom: 25 }}
+                    fontWeight={700}
+                  >
+                    {el}
+                  </Typography>
+                </motion.span>
               ))}
             </motion.div>
           </Container>
@@ -1078,7 +1148,7 @@ const Game: React.FC = () => {
                 <Tooltip title="Reset Game">
                   <span>
                     <Button
-                      disabled={game.laserAnimating}
+                      disabled={game.laserAnimating || game.animateHistory}
                       variant="contained"
                       onClick={resetGame}
                       color="secondary"
@@ -1091,7 +1161,7 @@ const Game: React.FC = () => {
                 <Tooltip title="Solve Game">
                   <span>
                     <Button
-                      disabled={game.gameOver || game.laserAnimating}
+                      disabled={game.gameOver || game.laserAnimating || game.animateHistory}
                       variant="contained"
                       onClick={solveGame}
                       color="primary"
@@ -1108,7 +1178,8 @@ const Game: React.FC = () => {
                       disabled={
                         game.laserAnimating ||
                         game.currentMove === 0 ||
-                        game.gameHistory.length === 0
+                        game.gameHistory.length === 0 ||
+                        game.animateHistory
                       }
                       onClick={() => {
                         if (game.currentMove === 0) return;
@@ -1139,7 +1210,8 @@ const Game: React.FC = () => {
                       disabled={
                         game.laserAnimating ||
                         game.currentMove === game.gameHistory.length - 1 ||
-                        game.gameHistory.length === 0
+                        game.gameHistory.length === 0 ||
+                        game.animateHistory
                       }
                       onClick={() => {
                         if (game.gameHistory.length === 0) return;
