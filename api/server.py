@@ -27,8 +27,11 @@ def solve():
     data = request.json 
     board_data = data['board']
     board = parse_board_data(board_data)
-    solver = Solver(board, "Silver")
-    solution = solver.solve_single_agent(board, "Silver")
+
+    solver = Solver(board, "Silver", debug=False)
+    solution = solver.solve_multi_agent(board, "Silver", search_depth=6)
+    print_moves(solution)
+
     solution_str = ""
     for move in solution:
         piece, action = move

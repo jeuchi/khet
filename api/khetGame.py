@@ -72,14 +72,20 @@ class KhetGame:
 # Example usage
 if __name__ == "__main__":
     data_folder = Path("ui/src/assets/boards")
-    file = data_folder / "test_mate_1.txt"
+    file = data_folder / "mate_3.txt"
     board_data_str = open(file)
     board_data=json.load(board_data_str)
 
     board = parse_board_data(board_data)
+    moves = board.get_all_possible_moves("Red")
+    print_moves(moves)
+    board.display_board()
 
-    solver = Solver(board, "Silver")
-    solution = solver.solve_multi_agent(board, "Silver")
-    print_moves(solution)
+
+    #solver = Solver(board, "Silver", debug=False)
+    #solution = solver.solve_multi_agent(board, "Silver", search_depth=6)
+    #print_moves(solution)
+
+    #solver.root.draw_tree()
 
     #board.display_board()

@@ -209,7 +209,10 @@ class Board:
             piece.set_position(position)
 
     def check_move_position(self, position, action):
-        return self.check_move(self, (self.get_grid_position(position), action))
+        piece = self.get_grid_position(position)
+        print(f"piece at position {position} is {piece.__class__.__name__}")
+        move = (self.get_grid_position(position), action)
+        return self.check_move(move)
 
     def check_move(self, move):
         piece, action = move
@@ -222,6 +225,17 @@ class Board:
         
         if action == action.PASS:
             return True
+        
+        if isinstance(piece, Sphynx) and piece.orientation == 0 and action == action.ROTATE_CW:
+            return False
+        if isinstance(piece, Sphynx) and piece.orientation == 3 and action == action.ROTATE_CCW:
+            return False
+        
+        if isinstance(piece, Sphynx) and piece.orientation == 1 and action == action.ROTATE_CCW:
+            return False
+        if isinstance(piece, Sphynx) and piece.orientation == 2 and action == action.ROTATE_CW:
+            return False
+        
         
         if action == action.ROTATE_CW or action == action.ROTATE_CCW:
             return True
@@ -268,12 +282,11 @@ class Board:
             raise Exception("Invalid move")
         piece_old, action = move
         new_board = self.deepcopy()
-        piece = new_board.get_grid_position(piece_old.position)
-        
 
-        if action == action.PASS and piece == None:
+        if action == action.PASS and piece_old == None:
             return new_board
 
+        piece = new_board.get_grid_position(piece_old.position)
         dx, dy, dtheta = action.value
         x, y = piece.position
         old_position = piece.position
@@ -295,9 +308,9 @@ class Board:
     
     def get_all_possible_moves(self, color):
         possible_moves = []
-        possible_moves.append((None, action.PASS))
         for piece in self.get_list_of_pieces():
             if piece.color == color:
                 for move in self.list_possible_moves(piece):
                     possible_moves.append((piece, move))
+        possible_moves.append((None, action.PASS))
         return possible_moves

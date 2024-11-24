@@ -41,6 +41,9 @@ import test4 from './assets/boards/test-4.txt';
 import test5 from './assets/boards/test-5.txt';
 import test6 from './assets/boards/test-6.txt';
 import test7 from './assets/boards/test-7.txt';
+import mate1 from './assets/boards/mate_1.txt';
+import mate2 from './assets/boards/mate_2.txt';
+import mate3 from './assets/boards/mate_3.txt';
 
 const AVAILABLE_BOARDS = [
   { name: 'Test 0', file: test0 },
@@ -50,7 +53,10 @@ const AVAILABLE_BOARDS = [
   { name: 'Test 4', file: test4 },
   { name: 'Test 5', file: test5 },
   { name: 'Test 6', file: test6 },
-  { name: 'Test 7', file: test7 }
+  { name: 'Test 7', file: test7 },
+  { name: 'Mate 1', file: mate1 },
+  { name: 'Mate 2', file: mate2 },
+  { name: 'Mate 3', file: mate3 }
 ];
 
 export interface GameHistory {
