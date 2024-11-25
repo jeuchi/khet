@@ -16,7 +16,7 @@ export const theme = createTheme({
   }
 });
 
-export const LASER_SPEED = 100;
+export const LASER_SPEED = 25;
 
 export const CELL_COLOR_MAIN =  grey[700];
 export const CELL_COLOR_EYE = red[200];

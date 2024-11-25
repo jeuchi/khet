@@ -883,7 +883,7 @@ const Game: React.FC = () => {
   }, [game.ai, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
-    if (!game.animateHistory) return;
+    if (!game.animateHistory || game.laserAnimating) return;
     const interval = setInterval(() => {
       setGame((prevGame) => {
         const nextMove = prevGame.currentMove + 1;
@@ -904,9 +904,9 @@ const Game: React.FC = () => {
           rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
         };
       });
-    }, 1000);
+    }, 250);
     return () => clearInterval(interval);
-  }, [game.animateHistory]);
+  }, [game.animateHistory, game.laserAnimating]);
 
   return (
     <Stack>
