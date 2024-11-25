@@ -174,7 +174,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
           </Button>
         )}
       </FormGroup>
-      <TableContainer component={Paper} sx={{ width: '300px', height: 415 }}>
+      <TableContainer component={Paper} sx={{ width: '380px', height: 415 }}>
         <Table aria-label="game history table">
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (

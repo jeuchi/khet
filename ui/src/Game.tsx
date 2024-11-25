@@ -24,6 +24,7 @@ import LinkOff from '@mui/icons-material/LinkOff';
 import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
+import { Save } from '@mui/icons-material';
 import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
@@ -1146,7 +1147,7 @@ const Game: React.FC = () => {
         >
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '350px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ width: '430px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 
@@ -1160,6 +1161,22 @@ const Game: React.FC = () => {
                       color="secondary"
                     >
                       <Add />
+                    </Button>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title="Save Board">
+                  <span>
+                    <Button
+                      variant="contained"
+                      onClick={() =>
+                        saveGameBoard(
+                          new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' })
+                        )
+                      }
+                      color="primary"
+                    >
+                      <Save />
                     </Button>
                   </span>
                 </Tooltip>
