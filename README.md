@@ -8,3 +8,4 @@ UCLA ECE 209AS (Fall, 2024) Project
 
 - Assets built upon [freepik](https://www.freepik.com)
 - Block animation edited from [dribble](https://dribbble.com/shots/23496341-Building-Blocks-Lightweight-Animated-Page-Loader)
+- Computer bot picture originally modified from [chess.com](https://www.chess.com/)
