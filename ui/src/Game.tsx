@@ -880,11 +880,11 @@ const Game: React.FC = () => {
 
           const move = res.data;
           if (!move) {
-            toast('No next best move found!');
+            toast.error('No next best move found!');
             return;
           }
         } catch (error: any) {
-          toast(error.response.data);
+          toast.error(error.response.data);
         }
       }
 
