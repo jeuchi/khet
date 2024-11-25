@@ -15,7 +15,8 @@ import {
   Container,
   Card,
   CardActionArea,
-  CardContent
+  CardContent,
+  CardMedia
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -35,29 +36,40 @@ import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
 import test0 from './assets/boards/test-0.txt';
+import test0Img from './assets/boards/test-0.png';
 import test1 from './assets/boards/test-1.txt';
+import test1Img from './assets/boards/test-1.png';
 import test2 from './assets/boards/test-2.txt';
+import test2Img from './assets/boards/test-2.png';
 import test3 from './assets/boards/test-3.txt';
+import test3Img from './assets/boards/test-3.png';
 import test4 from './assets/boards/test-4.txt';
+import test4Img from './assets/boards/test-4.png';
 import test5 from './assets/boards/test-5.txt';
+import test5Img from './assets/boards/test-5.png';
 import test6 from './assets/boards/test-6.txt';
+import test6Img from './assets/boards/test-6.png';
 import test7 from './assets/boards/test-7.txt';
+import test7Img from './assets/boards/test-7.png';
 import mate1 from './assets/boards/mate_1.txt';
+import mate1Img from './assets/boards/mate-1.png';
 import mate2 from './assets/boards/mate_2.txt';
+import mate2Img from './assets/boards/mate-2.png';
 import mate3 from './assets/boards/mate_3.txt';
+import mate3Img from './assets/boards/mate-3.png';
 
 const AVAILABLE_BOARDS = [
-  { name: 'Test 0', file: test0 },
-  { name: 'Test 1', file: test1 },
-  { name: 'Test 2', file: test2 },
-  { name: 'Test 3', file: test3 },
-  { name: 'Test 4', file: test4 },
-  { name: 'Test 5', file: test5 },
-  { name: 'Test 6', file: test6 },
-  { name: 'Test 7', file: test7 },
-  { name: 'Mate 1', file: mate1 },
-  { name: 'Mate 2', file: mate2 },
-  { name: 'Mate 3', file: mate3 }
+  { name: 'Test 0', file: test0, img: test0Img },
+  { name: 'Test 1', file: test1, img: test1Img },
+  { name: 'Test 2', file: test2, img: test2Img },
+  { name: 'Test 3', file: test3, img: test3Img },
+  { name: 'Test 4', file: test4, img: test4Img },
+  { name: 'Test 5', file: test5, img: test5Img },
+  { name: 'Test 6', file: test6, img: test6Img },
+  { name: 'Test 7', file: test7, img: test7Img },
+  { name: 'Mate 1', file: mate1, img: mate1Img },
+  { name: 'Mate 2', file: mate2, img: mate2Img },
+  { name: 'Mate 3', file: mate3, img: mate3Img }
 ];
 
 export interface GameHistory {
@@ -695,8 +707,8 @@ const Game: React.FC = () => {
         boardState: newBoardState,
         boardSelectionOpen: false
       }));
-    } catch (error) {
-      console.error('Error loading board:', error);
+    } catch (error: any) {
+      toast.error('Error loading the game board');
     }
   };
 
@@ -721,7 +733,7 @@ const Game: React.FC = () => {
 
       const solution = res.data;
       if (!solution) {
-        console.error('No solution found.');
+        toast.error('No solution found!');
         return;
       }
 
@@ -735,9 +747,9 @@ const Game: React.FC = () => {
         isSolving: true,
         callingApi: false
       }));
-    } catch (error) {
+    } catch (error: any) {
       setGame((prevGame) => ({ ...prevGame, callingApi: false }));
-      toast('Error solving the game');
+      toast.error(error.response.statusText);
     }
   };
 
@@ -1017,12 +1029,15 @@ const Game: React.FC = () => {
                   <Grid container spacing={2}>
                     {AVAILABLE_BOARDS.map((board) => (
                       <Grid item xs={12} sm={6} md={4} key={board.name}>
-                        <Card sx={{ maxWidth: 345 }}>
+                        <Card sx={{ maxWidth: 400 }}>
                           <CardActionArea onClick={() => selectGameBoard(board.file)}>
                             <CardContent>
-                              <Typography gutterBottom variant="h5" component="div">
+                              <Typography gutterBottom variant="h6" component="div">
                                 {board.name}
                               </Typography>
+                              {board.img && (
+                                <CardMedia component="img" image={board.img} alt={board.name} />
+                              )}
                             </CardContent>
                           </CardActionArea>
                         </Card>
