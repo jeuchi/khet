@@ -311,7 +311,8 @@ const Game: React.FC = () => {
         newBoardState[fromPosition.row][fromPosition.col] = null;
       }
 
-      const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
+      const formattedPieceType = piece.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
         columnLabels[toPosition.col]
       }${rowLabels[toPosition.row]}`;
 
@@ -647,7 +648,8 @@ const Game: React.FC = () => {
       newBoardState[row][col] = `${pieceName},${newDirection}`;
 
       const [pieceType] = newBoardState[row][col]?.split(',') || [];
-      const log = `${pieceType} rotated ${rotationDirection}`;
+      const formattedPieceType = pieceType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} rotated ${rotationDirection}`;
       const fromPosition = { row, col };
       const toPosition = { row, col };
 
@@ -869,7 +871,7 @@ const Game: React.FC = () => {
   // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
   useEffect(() => {
     const fetchNextMove = async () => {
-      if (!game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
+      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
 
@@ -893,7 +895,7 @@ const Game: React.FC = () => {
     };
 
     fetchNextMove();
-  }, [game.ai, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
+  }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
     if (!game.animateHistory || game.laserAnimating) return;
@@ -1146,6 +1148,7 @@ const Game: React.FC = () => {
                   <span>
                     <Button
                       variant="contained"
+                      disabled={game.animateHistory}
                       onClick={() =>
                         saveGameBoard(
                           new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' })
@@ -1167,6 +1170,8 @@ const Game: React.FC = () => {
                         setGame((prevGame) => ({
                           ...prevGame,
                           gameHistory: [],
+                          rotationAngles: {},
+                          lastMove: null,
                           boardState: prevGame.initialBoardState,
                           isSolving: true
                         }))
