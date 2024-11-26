@@ -12,6 +12,7 @@ import {
   FormGroup,
   FormControlLabel,
   Button,
+  Tooltip
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';
@@ -19,6 +20,7 @@ import BotDead from './assets/bot-dead.svg';
 import BotThinking from './assets/bot-thinking.svg';
 import BotSleeping from './assets/bot-sleeping.svg';
 import BuildingBlocks from './assets/building-blocks.gif';
+import { AutoAwesome, PlayArrow, Stop } from '@mui/icons-material';
 
 interface HistoryTableProps {
   game: Game;
@@ -57,7 +59,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
       <FormGroup>
         <Stack direction="row" alignContent={'center'} justifyContent={'start'} mt={4}>
           <FormControlLabel
-            disabled={game.isSolving || game.gameOver}
+            disabled={game.isSolving || game.gameOver || game.callingApi}
             control={
               <Switch
                 checked={game.ai}
@@ -182,11 +184,34 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
             </Stack>
           )}
         </Stack>
-        {game.gameOver && (
+        <Stack direction = "row" alignItems = "center" justifyContent = "center" spacing={2} my={1}>
+        <Tooltip title="Show Solution">
+          <span>
+        <Button
+          disabled={!game.solvingSteps || game.callingApi}
+          variant="contained"
+          onClick={() =>
+            setGame((prevGame) => ({
+              ...prevGame,
+              gameHistory: [],
+              rotationAngles: {},
+              lastMove: null,
+              isSolving: true,
+              boardState: prevGame.solvingBoardState
+            }))
+          }
+          color="primary"
+        >
+          <AutoAwesome />
+        </Button>
+        </span>
+        </Tooltip>
+                  <Tooltip title={game.animateHistory ? "Stop Autoplay" : "Autoplay History"}>
+          <span>
           <Button
             variant="contained"
             color="primary"
-            sx={{ m: 1 }}
+            disabled={game.isSolving || game.gameHistory.length === 0}
             onClick={() =>
               setGame((prevGame: Game) => ({
                 ...prevGame,
@@ -198,11 +223,15 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
               }))
             }
           >
-            {game.animateHistory ? 'Stop Autoplay' : 'Autoplay History'}
+            {game.animateHistory ? <Stop /> : <PlayArrow />}
           </Button>
-        )}
+          </span>
+          </Tooltip>
+        
+                  </Stack>
+
       </FormGroup>
-      <TableContainer component={Paper} sx={{ width: '380px', height: 415 }}>
+      <TableContainer component={Paper} sx={{ width: '300px', height: '285px' }}>
         <Table aria-label="game history table">
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (

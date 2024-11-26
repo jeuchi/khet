@@ -115,6 +115,7 @@ export interface Game {
   isLookingAtHistory: boolean;
   callingNextMove: boolean;
   winner: 'silver' | 'red' | null;
+  solvingBoardState: (string | null)[][];
 }
 
 // Direction vectors
@@ -167,7 +168,8 @@ const Game: React.FC = () => {
     turn: 'silver',
     isLookingAtHistory: false,
     callingNextMove: false,
-    winner: null
+    winner: null,
+    solvingBoardState: INITIAL_BOARD_STATE
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -275,7 +277,8 @@ const Game: React.FC = () => {
       editMode: true,
       pieceSelectionOpen: false,
       selectedCell: null,
-      laserPath: []
+      laserPath: [],
+      ai: false,
     }));
 
   const handleMovePiece = (
@@ -283,9 +286,13 @@ const Game: React.FC = () => {
     toPosition: { row: number; col: number }
   ) => {
     setGame((prevGame) => {
-      const [piece, direction] =
+      let [piece, direction] =
         prevGame.boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
       if (!piece) return prevGame;
+
+      if (!direction || direction === undefined) {
+        direction = 'up';
+      }
 
       const columnLabels = Array.from({ length: prevGame.cols }, (_, i) =>
         String.fromCharCode('a'.charCodeAt(0) + i)
@@ -311,7 +318,8 @@ const Game: React.FC = () => {
         newBoardState[fromPosition.row][fromPosition.col] = null;
       }
 
-      const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
+      const formattedPieceType = piece.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
         columnLabels[toPosition.col]
       }${rowLabels[toPosition.row]}`;
 
@@ -647,7 +655,8 @@ const Game: React.FC = () => {
       newBoardState[row][col] = `${pieceName},${newDirection}`;
 
       const [pieceType] = newBoardState[row][col]?.split(',') || [];
-      const log = `${pieceType} rotated ${rotationDirection}`;
+      const formattedPieceType = pieceType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} rotated ${rotationDirection}`;
       const fromPosition = { row, col };
       const toPosition = { row, col };
 
@@ -720,13 +729,15 @@ const Game: React.FC = () => {
     reader.readAsText(file);
   };
   useEffect(() => {
-    if (!game.editMode) {
+    if (!game.editMode && game.ai) {
       solveGame();
+    } else if (!game.ai) {
+      setGame((prevGame) => ({ ...prevGame, solvingSteps: null }));
     }
-  }, [game.editMode]);
+  }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
-    setGame((prevGame) => ({ ...prevGame, callingApi: true }));
+    setGame((prevGame) => ({ ...prevGame, callingApi: true, solvingBoardState: prevGame.boardState }));
 
     try {
       const res = await axios.post('/solve', {
@@ -869,7 +880,7 @@ const Game: React.FC = () => {
   // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
   useEffect(() => {
     const fetchNextMove = async () => {
-      if (!game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
+      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
 
@@ -892,8 +903,8 @@ const Game: React.FC = () => {
       setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
     };
 
-    fetchNextMove();
-  }, [game.ai, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
+    //fetchNextMove();
+  }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
     if (!game.animateHistory || game.laserAnimating) return;
@@ -917,7 +928,7 @@ const Game: React.FC = () => {
           rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
         };
       });
-    }, 250);
+    }, 500);
     return () => clearInterval(interval);
   }, [game.animateHistory, game.laserAnimating]);
 
@@ -1124,7 +1135,7 @@ const Game: React.FC = () => {
         >
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '430px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ width: '350px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 
@@ -1146,6 +1157,7 @@ const Game: React.FC = () => {
                   <span>
                     <Button
                       variant="contained"
+                      disabled={game.animateHistory}
                       onClick={() =>
                         saveGameBoard(
                           new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' })
@@ -1157,27 +1169,7 @@ const Game: React.FC = () => {
                     </Button>
                   </span>
                 </Tooltip>
-
-                <Tooltip title="Show Solution">
-                  <span>
-                    <Button
-                      disabled={!game.solvingSteps || game.callingApi}
-                      variant="contained"
-                      onClick={() =>
-                        setGame((prevGame) => ({
-                          ...prevGame,
-                          gameHistory: [],
-                          boardState: prevGame.initialBoardState,
-                          isSolving: true
-                        }))
-                      }
-                      color="primary"
-                    >
-                      <AutoAwesome />
-                    </Button>
-                  </span>
-                </Tooltip>
-
+                
                 <Tooltip title="Move Back">
                   <span>
                     <Button
