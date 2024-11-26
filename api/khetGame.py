@@ -75,17 +75,26 @@ if __name__ == "__main__":
     file = data_folder / "mate_3.txt"
     board_data_str = open(file)
     board_data=json.load(board_data_str)
-
     board = parse_board_data(board_data)
-    moves = board.get_all_possible_moves("Red")
-    print_moves(moves)
-    board.display_board()
 
-
-    #solver = Solver(board, "Silver", debug=False)
-    #solution = solver.solve_multi_agent(board, "Silver", search_depth=6)
-    #print_moves(solution)
-
-    #solver.root.draw_tree()
-
+    #moves = board.get_all_possible_moves("Red")
+    #print_moves(moves)
     #board.display_board()
+
+
+    solver = Solver(board, "Silver", debug=False)
+    solution = solver.solve_multi_agent(board, "Silver", search_depth=6)
+    print_moves(solution)
+    print(f" Number of nodes made: {TreeNode.num_nodes_made()}")
+
+    #solver.root.display_tree()
+    root = solver.root
+    best1 = root.best_child
+    best2 = best1.best_child
+    root.display_tree_one_level()
+    best1.display_tree_one_level()
+    best2.display_tree_one_level()
+    
+
+
+    board.display_board()

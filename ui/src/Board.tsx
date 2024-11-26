@@ -312,6 +312,7 @@ const Board: React.FC<BoardProps> = ({
 
             let isTurn =
               game.turn === pieceStr.split('_')[0] && !game.animateHistory && !game.laserAnimating;
+
             let borderRadius = '0';
 
             const laserSegment = game.laserPath.find(
@@ -404,32 +405,31 @@ const Board: React.FC<BoardProps> = ({
                           <RemoveIcon onClick={(e) => handleRemovePiece(e, rowIndex, colIndex)} />
                         )}
 
-                        {isTurn ||
-                          (game.editMode && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                bottom: 4,
-                                display: 'flex',
-                                gap: 8
+                        {(isTurn || game.editMode) && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              bottom: 4,
+                              display: 'flex',
+                              gap: 8
+                            }}
+                          >
+                            <RotateLeftIcon
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRotatePiece(rowIndex, colIndex, 'left');
                               }}
-                            >
-                              <RotateLeftIcon
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRotatePiece(rowIndex, colIndex, 'left');
-                                }}
-                                style={{ cursor: 'pointer' }}
-                              />
-                              <RotateRightIcon
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRotatePiece(rowIndex, colIndex, 'right');
-                                }}
-                                style={{ cursor: 'pointer' }}
-                              />
-                            </div>
-                          ))}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <RotateRightIcon
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRotatePiece(rowIndex, colIndex, 'right');
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            />
+                          </div>
+                        )}
                       </>
                     )}
                     {!piece && game.editMode && <AddPieceIcon />}

@@ -12,10 +12,10 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Container,
   Card,
   CardActionArea,
-  CardContent
+  CardContent,
+  CardMedia
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -24,41 +24,50 @@ import LinkOff from '@mui/icons-material/LinkOff';
 import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
+import { Save } from '@mui/icons-material';
 import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
-import BuildingBlocks from './assets/building-blocks.gif';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
-import { motion } from 'framer-motion';
 
 import Classic from './assets/boards/classic.txt';
 import test0 from './assets/boards/test-0.txt';
+import test0Img from './assets/boards/test-0.png';
 import test1 from './assets/boards/test-1.txt';
+import test1Img from './assets/boards/test-1.png';
 import test2 from './assets/boards/test-2.txt';
+import test2Img from './assets/boards/test-2.png';
 import test3 from './assets/boards/test-3.txt';
+import test3Img from './assets/boards/test-3.png';
 import test4 from './assets/boards/test-4.txt';
+import test4Img from './assets/boards/test-4.png';
 import test5 from './assets/boards/test-5.txt';
+import test5Img from './assets/boards/test-5.png';
 import test6 from './assets/boards/test-6.txt';
+import test6Img from './assets/boards/test-6.png';
 import test7 from './assets/boards/test-7.txt';
+import test7Img from './assets/boards/test-7.png';
 import mate1 from './assets/boards/mate_1.txt';
+import mate1Img from './assets/boards/mate-1.png';
 import mate2 from './assets/boards/mate_2.txt';
+import mate2Img from './assets/boards/mate-2.png';
 import mate3 from './assets/boards/mate_3.txt';
+import mate3Img from './assets/boards/mate-3.png';
 
 const AVAILABLE_BOARDS = [
-  { name: 'Classic', file: Classic },
-  { name: 'Test 0', file: test0 },
-  { name: 'Test 1', file: test1 },
-  { name: 'Test 2', file: test2 },
-  { name: 'Test 3', file: test3 },
-  { name: 'Test 4', file: test4 },
-  { name: 'Test 5', file: test5 },
-  { name: 'Test 6', file: test6 },
-  { name: 'Test 7', file: test7 },
-  { name: 'Mate 1', file: mate1 },
-  { name: 'Mate 2', file: mate2 },
-  { name: 'Mate 3', file: mate3 }
+  { name: 'Test 0', file: test0, img: test0Img },
+  { name: 'Test 1', file: test1, img: test1Img },
+  { name: 'Test 2', file: test2, img: test2Img },
+  { name: 'Test 3', file: test3, img: test3Img },
+  { name: 'Test 4', file: test4, img: test4Img },
+  { name: 'Test 5', file: test5, img: test5Img },
+  { name: 'Test 6', file: test6, img: test6Img },
+  { name: 'Test 7', file: test7, img: test7Img },
+  { name: 'Mate 1', file: mate1, img: mate1Img },
+  { name: 'Mate 2', file: mate2, img: mate2Img },
+  { name: 'Mate 3', file: mate3, img: mate3Img }
 ];
 
 export interface GameHistory {
@@ -107,6 +116,7 @@ export interface Game {
   isLookingAtHistory: boolean;
   callingNextMove: boolean;
   winner: 'silver' | 'red' | null;
+  solvingBoardState: (string | null)[][];
 }
 
 // Direction vectors
@@ -159,7 +169,8 @@ const Game: React.FC = () => {
     turn: 'silver',
     isLookingAtHistory: false,
     callingNextMove: false,
-    winner: null
+    winner: null,
+    solvingBoardState: INITIAL_BOARD_STATE
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -267,7 +278,8 @@ const Game: React.FC = () => {
       editMode: true,
       pieceSelectionOpen: false,
       selectedCell: null,
-      laserPath: []
+      laserPath: [],
+      ai: false,
     }));
 
   const handleMovePiece = (
@@ -275,9 +287,13 @@ const Game: React.FC = () => {
     toPosition: { row: number; col: number }
   ) => {
     setGame((prevGame) => {
-      const [piece, direction] =
+      let [piece, direction] =
         prevGame.boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
       if (!piece) return prevGame;
+
+      if (!direction || direction === undefined) {
+        direction = 'up';
+      }
 
       const columnLabels = Array.from({ length: prevGame.cols }, (_, i) =>
         String.fromCharCode('a'.charCodeAt(0) + i)
@@ -303,7 +319,8 @@ const Game: React.FC = () => {
         newBoardState[fromPosition.row][fromPosition.col] = null;
       }
 
-      const log = `${piece} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
+      const formattedPieceType = piece.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
         columnLabels[toPosition.col]
       }${rowLabels[toPosition.row]}`;
 
@@ -639,7 +656,8 @@ const Game: React.FC = () => {
       newBoardState[row][col] = `${pieceName},${newDirection}`;
 
       const [pieceType] = newBoardState[row][col]?.split(',') || [];
-      const log = `${pieceType} rotated ${rotationDirection}`;
+      const formattedPieceType = pieceType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const log = `${formattedPieceType} rotated ${rotationDirection}`;
       const fromPosition = { row, col };
       const toPosition = { row, col };
 
@@ -696,8 +714,8 @@ const Game: React.FC = () => {
         boardState: newBoardState,
         boardSelectionOpen: false
       }));
-    } catch (error) {
-      console.error('Error loading board:', error);
+    } catch (error: any) {
+      toast.error('Error loading the game board');
     }
   };
 
@@ -711,9 +729,16 @@ const Game: React.FC = () => {
     };
     reader.readAsText(file);
   };
+  useEffect(() => {
+    if (!game.editMode && game.ai) {
+      solveGame();
+    } else if (!game.ai) {
+      setGame((prevGame) => ({ ...prevGame, solvingSteps: null }));
+    }
+  }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
-    setGame((prevGame) => ({ ...prevGame, callingApi: true }));
+    setGame((prevGame) => ({ ...prevGame, callingApi: true, solvingBoardState: prevGame.boardState }));
 
     try {
       const res = await axios.post('/solve', {
@@ -722,7 +747,7 @@ const Game: React.FC = () => {
 
       const solution = res.data;
       if (!solution) {
-        console.error('No solution found.');
+        toast.error('No solution found!');
         return;
       }
 
@@ -733,12 +758,11 @@ const Game: React.FC = () => {
         ...prevGame,
         solvingSteps: steps,
         currentSolvingStepIndex: 0,
-        isSolving: true,
         callingApi: false
       }));
-    } catch (error) {
+    } catch (error: any) {
       setGame((prevGame) => ({ ...prevGame, callingApi: false }));
-      toast('Error solving the game');
+      toast.error(error.response.statusText);
     }
   };
 
@@ -857,7 +881,7 @@ const Game: React.FC = () => {
   // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
   useEffect(() => {
     const fetchNextMove = async () => {
-      if (!game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
+      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
 
@@ -869,22 +893,22 @@ const Game: React.FC = () => {
 
           const move = res.data;
           if (!move) {
-            toast('No next best move found!');
+            toast.error('No next best move found!');
             return;
           }
         } catch (error: any) {
-          toast(error.response.data);
+          toast.error(error.response.data);
         }
       }
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
     };
 
-    fetchNextMove();
-  }, [game.ai, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
+    //fetchNextMove();
+  }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
-    if (!game.animateHistory) return;
+    if (!game.animateHistory || game.laserAnimating) return;
     const interval = setInterval(() => {
       setGame((prevGame) => {
         const nextMove = prevGame.currentMove + 1;
@@ -905,9 +929,9 @@ const Game: React.FC = () => {
           rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
         };
       });
-    }, 1000);
+    }, 500);
     return () => clearInterval(interval);
-  }, [game.animateHistory]);
+  }, [game.animateHistory, game.laserAnimating]);
 
   return (
     <Stack>
@@ -1018,12 +1042,15 @@ const Game: React.FC = () => {
                   <Grid container spacing={2}>
                     {AVAILABLE_BOARDS.map((board) => (
                       <Grid item xs={12} sm={6} md={4} key={board.name}>
-                        <Card sx={{ maxWidth: 345 }}>
+                        <Card sx={{ maxWidth: 400 }}>
                           <CardActionArea onClick={() => selectGameBoard(board.file)}>
                             <CardContent>
-                              <Typography gutterBottom variant="h5" component="div">
+                              <Typography gutterBottom variant="h6" component="div">
                                 {board.name}
                               </Typography>
+                              {board.img && (
+                                <CardMedia component="img" image={board.img} alt={board.name} />
+                              )}
                             </CardContent>
                           </CardActionArea>
                         </Card>
@@ -1100,45 +1127,6 @@ const Game: React.FC = () => {
             </DialogActions>
           </Dialog>
         </Stack>
-      ) : game.callingApi ? (
-        <Stack direction="column" alignItems="start">
-          <Container>
-            <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '50%' }} />.
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.75,
-                repeat: Infinity,
-                repeatDelay: 1
-              }}
-              style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            >
-              {Array.from('Solving...').map((el: string, i: number) => (
-                <motion.span
-                  initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: 1, y: [0, -10, 0] }}
-                  transition={{
-                    duration: 0.75,
-                    delay: i * 0.1,
-                    repeat: Infinity,
-                    repeatDelay: 1
-                  }}
-                  key={i}
-                >
-                  <Typography
-                    variant="h4"
-                    align="center"
-                    style={{ marginBottom: 25 }}
-                    fontWeight={700}
-                  >
-                    {el}
-                  </Typography>
-                </motion.span>
-              ))}
-            </motion.div>
-          </Container>
-        </Stack>
       ) : (
         <Stack
           direction={isMobile ? 'column' : 'row'}
@@ -1166,19 +1154,23 @@ const Game: React.FC = () => {
                   </span>
                 </Tooltip>
 
-                <Tooltip title="Solve Game">
+                <Tooltip title="Save Board">
                   <span>
                     <Button
-                      disabled={game.gameOver || game.laserAnimating || game.animateHistory}
                       variant="contained"
-                      onClick={solveGame}
+                      disabled={game.animateHistory}
+                      onClick={() =>
+                        saveGameBoard(
+                          new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' })
+                        )
+                      }
                       color="primary"
                     >
-                      <AutoAwesome />
+                      <Save />
                     </Button>
                   </span>
                 </Tooltip>
-
+                
                 <Tooltip title="Move Back">
                   <span>
                     <Button

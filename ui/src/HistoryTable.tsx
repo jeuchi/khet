@@ -11,13 +11,16 @@ import {
   Switch,
   FormGroup,
   FormControlLabel,
-  Button
+  Button,
+  Tooltip
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';
 import BotDead from './assets/bot-dead.svg';
 import BotThinking from './assets/bot-thinking.svg';
 import BotSleeping from './assets/bot-sleeping.svg';
+import BuildingBlocks from './assets/building-blocks.gif';
+import { AutoAwesome, PlayArrow, Stop } from '@mui/icons-material';
 
 interface HistoryTableProps {
   game: Game;
@@ -43,22 +46,20 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
         setBotText('Your turn!');
       }
     } else {
-      setBotText('...');
+      if (game.gameOver) {
+        setBotText('Game Over');
+      } else {
+        setBotText('Ready to play!');
+      }
     }
   }, [game.ai, game.gameOver, game.callingNextMove]);
 
   return (
     <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
-      <Typography variant="h6">Game History</Typography>
-      {game.gameOver && (
-        <Typography variant="body1" color="error">
-          Game Over
-        </Typography>
-      )}
       <FormGroup>
-        <Stack direction="row" alignContent={'center'} justifyContent={'start'}>
+        <Stack direction="row" alignContent={'center'} justifyContent={'start'} mt={4}>
           <FormControlLabel
-            disabled={game.isSolving || game.gameOver}
+            disabled={game.isSolving || game.gameOver || game.callingApi}
             control={
               <Switch
                 checked={game.ai}
@@ -79,9 +80,11 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   ? game.winner === 'silver'
                     ? BotDead
                     : Bot
-                  : game.callingNextMove
+                  : game.callingNextMove || game.callingApi
                   ? BotThinking
                   : Bot
+                : game.callingApi
+                ? BotThinking
                 : BotSleeping
             }
             alt="bot"
@@ -135,30 +138,80 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   }}
                 />
               </Stack>
-              <Typography
-                variant="body2"
-                sx={{
-                  position: 'absolute',
-                  top: '-35px',
-                  left: '81px',
-                  width: '100px',
-                  background: 'white',
-                  borderRadius: '10px',
-                  padding: '5px',
-                  boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                {botText}
-              </Typography>
+              {game.callingApi ? (
+                <>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      position: 'absolute',
+                      top: '-50px',
+                      left: '90px',
+                      width: '99px',
+                      background: 'white',
+                      borderRadius: '10px',
+                      padding: '5px',
+                      boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <Stack direction="column" alignItems="center">
+                      <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '100%' }} />
+                      <Typography variant="body2" align="center" fontWeight={500}>
+                        Solving...
+                      </Typography>
+                    </Stack>
+                  </Typography>
+                </>
+              ) : (
+                <Typography
+                  variant="body2"
+                  fontWeight={500}
+                  sx={{
+                    position: 'absolute',
+                    top: '-34px',
+                    left: '100px',
+                    width: '120px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    padding: '5px',
+                    boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {botText}
+                </Typography>
+              )}
             </Stack>
           )}
         </Stack>
-        {game.gameOver && (
+        <Stack direction = "row" alignItems = "center" justifyContent = "center" spacing={2} my={1}>
+        <Tooltip title="Show Solution">
+          <span>
+        <Button
+          disabled={!game.solvingSteps || game.callingApi}
+          variant="contained"
+          onClick={() =>
+            setGame((prevGame) => ({
+              ...prevGame,
+              gameHistory: [],
+              rotationAngles: {},
+              lastMove: null,
+              isSolving: true,
+              boardState: prevGame.solvingBoardState
+            }))
+          }
+          color="primary"
+        >
+          <AutoAwesome />
+        </Button>
+        </span>
+        </Tooltip>
+                  <Tooltip title={game.animateHistory ? "Stop Autoplay" : "Autoplay History"}>
+          <span>
           <Button
             variant="contained"
             color="primary"
-            sx={{ m: 1 }}
+            disabled={game.isSolving || game.gameHistory.length === 0}
             onClick={() =>
               setGame((prevGame: Game) => ({
                 ...prevGame,
@@ -170,11 +223,15 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
               }))
             }
           >
-            {game.animateHistory ? 'Stop Autoplay' : 'Autoplay History'}
+            {game.animateHistory ? <Stop /> : <PlayArrow />}
           </Button>
-        )}
+          </span>
+          </Tooltip>
+        
+                  </Stack>
+
       </FormGroup>
-      <TableContainer component={Paper} sx={{ width: '300px', height: 415 }}>
+      <TableContainer component={Paper} sx={{ width: '300px', height: '285px' }}>
         <Table aria-label="game history table">
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (
