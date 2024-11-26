@@ -115,6 +115,7 @@ export interface Game {
   isLookingAtHistory: boolean;
   callingNextMove: boolean;
   winner: 'silver' | 'red' | null;
+  solvingBoardState: (string | null)[][];
 }
 
 // Direction vectors
@@ -167,7 +168,8 @@ const Game: React.FC = () => {
     turn: 'silver',
     isLookingAtHistory: false,
     callingNextMove: false,
-    winner: null
+    winner: null,
+    solvingBoardState: INITIAL_BOARD_STATE
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -735,7 +737,7 @@ const Game: React.FC = () => {
   }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
-    setGame((prevGame) => ({ ...prevGame, callingApi: true }));
+    setGame((prevGame) => ({ ...prevGame, callingApi: true, solvingBoardState: prevGame.boardState }));
 
     try {
       const res = await axios.post('/solve', {

@@ -196,7 +196,8 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
               gameHistory: [],
               rotationAngles: {},
               lastMove: null,
-              isSolving: true
+              isSolving: true,
+              boardState: prevGame.solvingBoardState
             }))
           }
           color="primary"
