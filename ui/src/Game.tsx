@@ -275,7 +275,8 @@ const Game: React.FC = () => {
       editMode: true,
       pieceSelectionOpen: false,
       selectedCell: null,
-      laserPath: []
+      laserPath: [],
+      ai: false,
     }));
 
   const handleMovePiece = (
@@ -283,9 +284,13 @@ const Game: React.FC = () => {
     toPosition: { row: number; col: number }
   ) => {
     setGame((prevGame) => {
-      const [piece, direction] =
+      let [piece, direction] =
         prevGame.boardState[fromPosition.row][fromPosition.col]?.split(',') || [];
       if (!piece) return prevGame;
+
+      if (!direction || direction === undefined) {
+        direction = 'up';
+      }
 
       const columnLabels = Array.from({ length: prevGame.cols }, (_, i) =>
         String.fromCharCode('a'.charCodeAt(0) + i)
@@ -722,10 +727,12 @@ const Game: React.FC = () => {
     reader.readAsText(file);
   };
   useEffect(() => {
-    if (!game.editMode) {
+    if (!game.editMode && game.ai) {
       solveGame();
+    } else if (!game.ai) {
+      setGame((prevGame) => ({ ...prevGame, solvingSteps: null }));
     }
-  }, [game.editMode]);
+  }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
     setGame((prevGame) => ({ ...prevGame, callingApi: true }));
@@ -894,7 +901,7 @@ const Game: React.FC = () => {
       setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
     };
 
-    fetchNextMove();
+    //fetchNextMove();
   }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
@@ -919,7 +926,7 @@ const Game: React.FC = () => {
           rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
         };
       });
-    }, 250);
+    }, 500);
     return () => clearInterval(interval);
   }, [game.animateHistory, game.laserAnimating]);
 
@@ -1126,7 +1133,7 @@ const Game: React.FC = () => {
         >
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '430px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ width: '350px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 
@@ -1160,29 +1167,7 @@ const Game: React.FC = () => {
                     </Button>
                   </span>
                 </Tooltip>
-
-                <Tooltip title="Show Solution">
-                  <span>
-                    <Button
-                      disabled={!game.solvingSteps || game.callingApi}
-                      variant="contained"
-                      onClick={() =>
-                        setGame((prevGame) => ({
-                          ...prevGame,
-                          gameHistory: [],
-                          rotationAngles: {},
-                          lastMove: null,
-                          boardState: prevGame.initialBoardState,
-                          isSolving: true
-                        }))
-                      }
-                      color="primary"
-                    >
-                      <AutoAwesome />
-                    </Button>
-                  </span>
-                </Tooltip>
-
+                
                 <Tooltip title="Move Back">
                   <span>
                     <Button
