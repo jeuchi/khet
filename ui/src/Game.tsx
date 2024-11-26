@@ -33,6 +33,7 @@ import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
+import Classic from './assets/boards/classic.txt';
 import test0 from './assets/boards/test-0.txt';
 import test1 from './assets/boards/test-1.txt';
 import test2 from './assets/boards/test-2.txt';
@@ -46,6 +47,7 @@ import mate2 from './assets/boards/mate_2.txt';
 import mate3 from './assets/boards/mate_3.txt';
 
 const AVAILABLE_BOARDS = [
+  { name: 'Classic', file: Classic },
   { name: 'Test 0', file: test0 },
   { name: 'Test 1', file: test1 },
   { name: 'Test 2', file: test2 },

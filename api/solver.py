@@ -55,6 +55,8 @@ class Solver:
             print(f"Value: {current_node.value}")
 
         return move_list
+    
+    def get_best_move(self, )
 
         
     def minimax(self, node, is_max, search_depth):
@@ -79,7 +81,7 @@ class Solver:
                 #continue
             
             child_node = TreeNode(child_board, node, move, piece_destroyed)
-            node.add_child(child_node)
+            node.add_child(child_node, move)
             
             current_value = self.minimax(child_node, not is_max, search_depth)
             
@@ -129,7 +131,7 @@ class Solver:
                 child_node = TreeNode(child_board, current_node, move, piece_destroyed)
                 if isinstance(piece_destroyed, Pharaoh) and piece_destroyed.color == opponent_color:
                     return child_node
-                current_node.add_child(child_node)
+                current_node.add_child(child_node, move)
                 queue.append(child_node)
 
 
@@ -166,8 +168,8 @@ class TreeNode:
     def get_value(self):
         return self.value
 
-    def add_child(self, child):
-        self.children.append(child)
+    def add_child(self, child, move):
+        self.children.append((child, move))
 
     @classmethod
     def add_visited_board(cls, board):
