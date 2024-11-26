@@ -12,7 +12,6 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Container,
   Card,
   CardActionArea,
   CardContent,
@@ -30,10 +29,8 @@ import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
-import BuildingBlocks from './assets/building-blocks.gif';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
-import { motion } from 'framer-motion';
 
 import test0 from './assets/boards/test-0.txt';
 import test0Img from './assets/boards/test-0.png';
@@ -722,6 +719,11 @@ const Game: React.FC = () => {
     };
     reader.readAsText(file);
   };
+  useEffect(() => {
+    if (!game.editMode) {
+      solveGame();
+    }
+  }, [game.editMode]);
 
   const solveGame = async () => {
     setGame((prevGame) => ({ ...prevGame, callingApi: true }));
@@ -744,7 +746,6 @@ const Game: React.FC = () => {
         ...prevGame,
         solvingSteps: steps,
         currentSolvingStepIndex: 0,
-        isSolving: true,
         callingApi: false
       }));
     } catch (error: any) {
@@ -1114,45 +1115,6 @@ const Game: React.FC = () => {
             </DialogActions>
           </Dialog>
         </Stack>
-      ) : game.callingApi ? (
-        <Stack direction="column" alignItems="start">
-          <Container>
-            <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '50%' }} />.
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.75,
-                repeat: Infinity,
-                repeatDelay: 1
-              }}
-              style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            >
-              {Array.from('Solving...').map((el: string, i: number) => (
-                <motion.span
-                  initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: 1, y: [0, -10, 0] }}
-                  transition={{
-                    duration: 0.75,
-                    delay: i * 0.1,
-                    repeat: Infinity,
-                    repeatDelay: 1
-                  }}
-                  key={i}
-                >
-                  <Typography
-                    variant="h4"
-                    align="center"
-                    style={{ marginBottom: 25 }}
-                    fontWeight={700}
-                  >
-                    {el}
-                  </Typography>
-                </motion.span>
-              ))}
-            </motion.div>
-          </Container>
-        </Stack>
       ) : (
         <Stack
           direction={isMobile ? 'column' : 'row'}
@@ -1196,12 +1158,19 @@ const Game: React.FC = () => {
                   </span>
                 </Tooltip>
 
-                <Tooltip title="Solve Game">
+                <Tooltip title="Show Solution">
                   <span>
                     <Button
-                      disabled={game.gameOver || game.laserAnimating || game.animateHistory}
+                      disabled={!game.solvingSteps || game.callingApi}
                       variant="contained"
-                      onClick={solveGame}
+                      onClick={() =>
+                        setGame((prevGame) => ({
+                          ...prevGame,
+                          gameHistory: [],
+                          boardState: prevGame.initialBoardState,
+                          isSolving: true
+                        }))
+                      }
                       color="primary"
                     >
                       <AutoAwesome />

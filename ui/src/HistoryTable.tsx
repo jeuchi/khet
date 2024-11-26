@@ -11,13 +11,14 @@ import {
   Switch,
   FormGroup,
   FormControlLabel,
-  Button
+  Button,
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';
 import BotDead from './assets/bot-dead.svg';
 import BotThinking from './assets/bot-thinking.svg';
 import BotSleeping from './assets/bot-sleeping.svg';
+import BuildingBlocks from './assets/building-blocks.gif';
 
 interface HistoryTableProps {
   game: Game;
@@ -43,20 +44,18 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
         setBotText('Your turn!');
       }
     } else {
-      setBotText('...');
+      if (game.gameOver) {
+        setBotText('Game Over');
+      } else {
+        setBotText('Ready to play!');
+      }
     }
   }, [game.ai, game.gameOver, game.callingNextMove]);
 
   return (
     <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
-      <Typography variant="h6">Game History</Typography>
-      {game.gameOver && (
-        <Typography variant="body1" color="error">
-          Game Over
-        </Typography>
-      )}
       <FormGroup>
-        <Stack direction="row" alignContent={'center'} justifyContent={'start'}>
+        <Stack direction="row" alignContent={'center'} justifyContent={'start'} mt={4}>
           <FormControlLabel
             disabled={game.isSolving || game.gameOver}
             control={
@@ -79,9 +78,11 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   ? game.winner === 'silver'
                     ? BotDead
                     : Bot
-                  : game.callingNextMove
+                  : game.callingNextMove || game.callingApi
                   ? BotThinking
                   : Bot
+                : game.callingApi
+                ? BotThinking
                 : BotSleeping
             }
             alt="bot"
@@ -135,22 +136,49 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   }}
                 />
               </Stack>
-              <Typography
-                variant="body2"
-                sx={{
-                  position: 'absolute',
-                  top: '-35px',
-                  left: '81px',
-                  width: '100px',
-                  background: 'white',
-                  borderRadius: '10px',
-                  padding: '5px',
-                  boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                {botText}
-              </Typography>
+              {game.callingApi ? (
+                <>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      position: 'absolute',
+                      top: '-50px',
+                      left: '90px',
+                      width: '99px',
+                      background: 'white',
+                      borderRadius: '10px',
+                      padding: '5px',
+                      boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
+                      transform: 'translateX(-50%)'
+                    }}
+                  >
+                    <Stack direction="column" alignItems="center">
+                      <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '100%' }} />
+                      <Typography variant="body2" align="center" fontWeight={500}>
+                        Solving...
+                      </Typography>
+                    </Stack>
+                  </Typography>
+                </>
+              ) : (
+                <Typography
+                  variant="body2"
+                  fontWeight={500}
+                  sx={{
+                    position: 'absolute',
+                    top: '-34px',
+                    left: '100px',
+                    width: '120px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    padding: '5px',
+                    boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {botText}
+                </Typography>
+              )}
             </Stack>
           )}
         </Stack>
