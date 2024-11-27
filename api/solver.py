@@ -11,7 +11,7 @@ import networkx as nx
 class Solver:
     win_reward = 1e100
 
-    def __init__(self, starting_board, player_color, debug = False, gamma = 0.9):
+    def __init__(self, starting_board, player_color, debug = False, search_depth=6, gamma = 0.9):
         self.starting_board = starting_board
         self.player_color = player_color
         self.root = TreeNode(starting_board)
@@ -19,6 +19,8 @@ class Solver:
         self.gamma = gamma
         self.debug = debug
         self.current_node = self.root
+        self.search_depth = search_depth
+        TreeNode.reset_visited()
 
     def solve_single_agent(self, debug = False):
         TreeNode.reset_visited()
@@ -42,12 +44,11 @@ class Solver:
         print(f"Numer of visited nodes: {num_visited}")
         return winning_moves_list
 
-    def solve_multi_agent(self, starting_board, player_color, debug = False, search_depth = 4):
+    def solve_multi_agent(self, node, debug = False):
         # Create the root node
-        TreeNode.reset_visited()
 
         #self.minimax(self.root, True, search_depth)
-        self.alphabeta(self.root, search_depth, -float('inf'), float('inf'), True)
+        self.alphabeta(self.root, self.search_depth, -float('inf'), float('inf'), True)
         current_node = self.root
         print(f"Value: {current_node.value}")
         move_list = []
@@ -58,7 +59,23 @@ class Solver:
 
         return move_list
     
+    def get_next_best_move(self, received_move):
+        if received_move in self.current_node.children:
+            active_node = self.current_node.get_child(received_move)
+        else:
+            active_board = self.current_node.board.make_move(received_move, check_allowed=True)
+            turn_color = received_move[0].color
+            piece_destroyed = active_board.fire_laser(turn_color)
+            active_node = TreeNode(self.current_node.board.make_move(received_move, check_allowed=True), self.current_node, received_move, piece_destroyed)
+            depth_remaining = self.search_depth - self.current_node.depth
+            self.alphabeta(self.current_node, depth_remaining, -float('inf'), float('inf'), True)
 
+
+        next_node = active_node.best_child
+        next_best_move = next_node.move
+
+        self.current_node = next_node
+        return next_best_move
         
     def minimax(self, node, is_max, search_depth):
         turn_color = self.player_color if is_max else self.opponent_color

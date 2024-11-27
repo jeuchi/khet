@@ -31,6 +31,7 @@ def parse_board_data(board_data):
     return board
 
 def parse_move_data(move_data, board):
+    move_data = move_data.split(",")
     x = int(move_data[0])
     y = int(move_data[1])
     action_str = move_data[2]
