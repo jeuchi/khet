@@ -1,7 +1,7 @@
 import time
 from flask import Flask, request
 from solver import *
-from board import Board, parse_board_data
+from board import *
 
 
 app = Flask(__name__)
@@ -11,46 +11,26 @@ solver = None
 @app.route('/api/next-best-move', methods=['POST'])
 def next_best_move():
     data = request.json
-    move_data = data['board']
-    x = move_data[0]
-    y = move_data[1]
-    action_str = move_data[2]
-    piece = solver.current_node.get_piece_at_position((x, y))
-    action = Action(action_str)
-
-
-    valid_moves = solver.current_node.get_all_possible_moves("Silver")
-
-    try :
-        
-        board = parse_board_data(board_data)
-    except:
-        return ('Invalid board data', 400)
-    # Implement your next best move logic here
-    #parse move
-    for node in solver.current_node.children:   
-        node_piece, node_action = node.move
-        if node_piece == piece and node_action == action:
-            solver.current_node = node
-            break
-
-    solver.current_node = solver.current_node.best_child
-    optimal_move = solver.current_node.move
-    optimal_move_piece, optimal_move_action = optimal_move
+    move_data = data['move']
+    previous_known_node = solver.current_node
     
+    received_move = parse_move_data(move_data, previous_known_node.board)
+    
+    if previous_known_node.board.check_move(received_move) == False:
+        print("Invalid move")
+        return {"error": "Invalid move"}, 400
+
+    active_node = solver.current_node.get_child(received_move)
+
+    next_node = active_node.best_child
+    next_best_move = next_node.move
+
+    solver.current_node = next_node
+    
+    optimal_move_piece, optimal_move_action = next_best_move
     r, c = optimal_move_piece.position
     move_str = f"{r},{c},{optimal_move_action}"
-
-
-    #traverse to node in tree
-
-    #return best move from that node
-
-    # If not solvable, return 400
-    time.sleep(1)
-
-    # Otherwise, return string of the next best move
-    return ('Note to self: Implement next best move logic', 404)
+    return move_str
 
 @app.route('/api/solve', methods=['POST'])
 def solve():

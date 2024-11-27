@@ -1,5 +1,5 @@
 from piece import Pharaoh, Anubis, Pyramid, Scarab, Sphynx, action, create_piece_from_str
-from board import Board, parse_board_data, print_moves
+from board import *
 from solver import *
 import json
 from pathlib import Path
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     #moves = board.get_all_possible_moves("Red")
     #print_moves(moves)
-    #board.display_board()
+    board.display_board()
 
 
     solver = Solver(board, "Silver", debug=False)
@@ -87,14 +87,31 @@ if __name__ == "__main__":
     print_moves(solution)
     print(f" Number of nodes made: {TreeNode.num_nodes_made()}")
 
-    #solver.root.display_tree()
-    root = solver.root
-    best1 = root.best_child
-    best2 = best1.best_child
-    root.display_tree_one_level()
-    best1.display_tree_one_level()
-    best2.display_tree_one_level()
+    move_file = data_folder / "mate_3_move_made.txt"
+    move_str = open(move_file)
+    move_data = json.load(move_str)
+
+    previous_known_node = solver.current_node
+    
+    received_move = parse_move_data(move_data, previous_known_node.board)
+    
+    if previous_known_node.board.check_move(received_move) == False:
+        print("Invalid move")
+
+    active_node = solver.current_node.get_child(received_move)
+
+    next_node = active_node.best_child
+    next_best_move = next_node.move
+
+    solver.current_node = next_node
+    
+    optimal_move_piece, optimal_move_action = next_best_move
+    r, c = optimal_move_piece.position
+    move_str = f"{r},{c},{optimal_move_action}"
+    print(move_str)
+    print_move(next_best_move)
+
+    
     
 
 
-    board.display_board()

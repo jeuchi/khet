@@ -30,6 +30,18 @@ def parse_board_data(board_data):
     board = Board(m=m, n=n, list_of_pieces=list_of_pieces)
     return board
 
+def parse_move_data(move_data, board):
+    x = int(move_data[0])
+    y = int(move_data[1])
+    action_str = move_data[2]
+
+    piece = board.get_grid_position((x, y))
+    action_enum = action[action_str]
+    move = (piece, action_enum)
+
+    return move
+    
+
 def print_moves(moves):
     for move in moves:
         print_move(move)

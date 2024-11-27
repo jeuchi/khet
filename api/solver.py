@@ -58,7 +58,6 @@ class Solver:
 
         return move_list
     
-    def get_best_move(self, )
 
         
     def minimax(self, node, is_max, search_depth):
@@ -120,7 +119,7 @@ class Solver:
                 child_board = node.board.make_move(move, check_allowed=True)
                 piece_destroyed = child_board.fire_laser(turn_color)
                 child_node = TreeNode(child_board, node, move, piece_destroyed)
-                node.add_child(child_node)
+                node.add_child(child_node, move)
                 child_node_value = self.alphabeta(child_node, depth - 1, alpha, beta, False)
                 if child_node_value > value:
                     node.best_child = child_node
@@ -139,7 +138,7 @@ class Solver:
                 child_board = node.board.make_move(move, check_allowed=True)
                 piece_destroyed = child_board.fire_laser(turn_color)
                 child_node = TreeNode(child_board, node, move, piece_destroyed)
-                node.add_child(child_node)
+                node.add_child(child_node, move)
                 child_node_value = self.alphabeta(child_node, depth - 1, alpha, beta, True)
                 if child_node_value < value:
                     node.best_child = child_node
@@ -201,7 +200,7 @@ class TreeNode:
     def __init__(self, board, parent=None, move=None, piece_destroyed=None):
         self.board = board
         self.parent = parent
-        self.children = []
+        self.children = {}   
         self.move = move
         self.depth = parent.depth + 1 if parent is not None else 0
         self.winner = None
@@ -215,7 +214,10 @@ class TreeNode:
         return self.value
 
     def add_child(self, child, move):
-        self.children.append((child, move))
+        self.children[move] = child
+
+    def get_child(self, move):
+        return self.children[move]
 
     @classmethod
     def add_visited_board(cls, board):

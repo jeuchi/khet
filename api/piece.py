@@ -59,6 +59,9 @@ class Piece:
             self.orientation == value.orientation and
             self.symbol == value.symbol)
     
+    def __hash__(self):
+        return hash((self.color, self.position, self.orientation, self.symbol))
+    
     def deepcopy(self):
         new_piece = self.__class__(self.color, self.position, self.orientation)
         return new_piece
