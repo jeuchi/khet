@@ -25,14 +25,12 @@ import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
 import Add from '@mui/icons-material/Add';
 import { Save } from '@mui/icons-material';
-import { AutoAwesome } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 
-import Classic from './assets/boards/classic.txt';
 import test0 from './assets/boards/test-0.txt';
 import test0Img from './assets/boards/test-0.png';
 import test1 from './assets/boards/test-1.txt';
@@ -76,6 +74,7 @@ export interface GameHistory {
   to: { row: number; col: number };
   move: string;
   rotationAngles: { [key: string]: number };
+  action: string;
 }
 
 export interface Game {
@@ -87,6 +86,7 @@ export interface Game {
   lastMove: {
     from: { row: number; col: number };
     to: { row: number; col: number };
+    action: string;
   } | null;
   gameOver: boolean;
   editMode: boolean;
@@ -279,7 +279,7 @@ const Game: React.FC = () => {
       pieceSelectionOpen: false,
       selectedCell: null,
       laserPath: [],
-      ai: false,
+      ai: false
     }));
 
   const handleMovePiece = (
@@ -319,10 +319,35 @@ const Game: React.FC = () => {
         newBoardState[fromPosition.row][fromPosition.col] = null;
       }
 
-      const formattedPieceType = piece.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-      const log = `${formattedPieceType} ${columnLabels[fromPosition.col]}${rowLabels[fromPosition.row]} to ${
-        columnLabels[toPosition.col]
-      }${rowLabels[toPosition.row]}`;
+      const formattedPieceType = piece
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      const log = `${formattedPieceType} ${columnLabels[fromPosition.col]}${
+        rowLabels[fromPosition.row]
+      } to ${columnLabels[toPosition.col]}${rowLabels[toPosition.row]}`;
+
+      // Based on the from and to position, determine the action (NORTH, NORTHEAST, etc.)
+      let action = '';
+      const dx = toPosition.col - fromPosition.col;
+      const dy = toPosition.row - fromPosition.row;
+      if (dx === 0 && dy < 0) {
+        action = 'NORTH';
+      } else if (dx > 0 && dy < 0) {
+        action = 'NORTH_EAST';
+      } else if (dx > 0 && dy === 0) {
+        action = 'EAST';
+      } else if (dx > 0 && dy > 0) {
+        action = 'SOUTH_EAST';
+      } else if (dx === 0 && dy > 0) {
+        action = 'SOUTH';
+      } else if (dx < 0 && dy > 0) {
+        action = 'SOUTH_WEST';
+      } else if (dx < 0 && dy === 0) {
+        action = 'WEST';
+      } else if (dx < 0 && dy < 0) {
+        action = 'NORTH_WEST';
+      }
 
       return {
         ...prevGame,
@@ -334,10 +359,11 @@ const Game: React.FC = () => {
             move: log,
             from: fromPosition,
             to: toPosition,
-            rotationAngles: newRotationAngles
+            rotationAngles: newRotationAngles,
+            action: action
           }
         ],
-        lastMove: { from: fromPosition, to: toPosition },
+        lastMove: { from: fromPosition, to: toPosition, action: action },
         currentMove: prevGame.gameHistory.length,
         rotationAngles: newRotationAngles
       };
@@ -656,10 +682,21 @@ const Game: React.FC = () => {
       newBoardState[row][col] = `${pieceName},${newDirection}`;
 
       const [pieceType] = newBoardState[row][col]?.split(',') || [];
-      const formattedPieceType = pieceType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      const formattedPieceType = pieceType
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
       const log = `${formattedPieceType} rotated ${rotationDirection}`;
       const fromPosition = { row, col };
       const toPosition = { row, col };
+
+      // Based on what the piece is, determine the action (ROTATE_CCW, ROTATE_CW)
+      let action = '';
+      if (rotationDirection === 'left') {
+        action = 'ROTATE_CCW';
+      } else {
+        action = 'ROTATE_CW';
+      }
 
       return {
         ...prevGame,
@@ -674,10 +711,11 @@ const Game: React.FC = () => {
                 move: log,
                 from: fromPosition,
                 to: toPosition,
-                rotationAngles: newRotationAngles
+                rotationAngles: newRotationAngles,
+                action: action
               }
             ],
-        lastMove: prevGame.editMode ? null : { from: fromPosition, to: toPosition },
+        lastMove: prevGame.editMode ? null : { from: fromPosition, to: toPosition, action: action },
         currentMove: prevGame.editMode ? 0 : prevGame.gameHistory.length
       };
     });
@@ -729,6 +767,7 @@ const Game: React.FC = () => {
     };
     reader.readAsText(file);
   };
+
   useEffect(() => {
     if (!game.editMode && game.ai) {
       solveGame();
@@ -738,7 +777,11 @@ const Game: React.FC = () => {
   }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
-    setGame((prevGame) => ({ ...prevGame, callingApi: true, solvingBoardState: prevGame.boardState }));
+    setGame((prevGame) => ({
+      ...prevGame,
+      callingApi: true,
+      solvingBoardState: prevGame.boardState
+    }));
 
     try {
       const res = await axios.post('/solve', {
@@ -766,16 +809,8 @@ const Game: React.FC = () => {
     }
   };
 
-  // Define a function to process the next step
-  const processNextSolvingStep = () => {
-    if (!game.solvingSteps || game.currentSolvingStepIndex >= game.solvingSteps.length) {
-      // All steps processed, stop solving
-      setGame((prevGame) => ({ ...prevGame, isSolving: false, solvingSteps: null }));
-      return;
-    }
-
-    const step = game.solvingSteps[game.currentSolvingStepIndex];
-    const [backendColStr, backendRowStr, action] = step.split(',');
+  const handleBackendMove = (move: string) => {
+    const [backendColStr, backendRowStr, action] = move.split(',');
     if (!backendRowStr || !backendColStr || !action) {
       // Invalid step, proceed to next
       setGame((prevGame) => ({
@@ -839,6 +874,18 @@ const Game: React.FC = () => {
       //console.log(`Move piece from (${frontendRow}, ${frontendCol}) to (${newRow}, ${newCol})`);
       handleMovePiece({ row: frontendRow, col: frontendCol }, { row: newRow, col: newCol });
     }
+  };
+
+  // Define a function to process the next step
+  const processNextSolvingStep = () => {
+    if (!game.solvingSteps || game.currentSolvingStepIndex >= game.solvingSteps.length) {
+      // All steps processed, stop solving
+      setGame((prevGame) => ({ ...prevGame, isSolving: false, solvingSteps: null }));
+      return;
+    }
+
+    const step = game.solvingSteps[game.currentSolvingStepIndex];
+    handleBackendMove(step);
 
     // After handling the move, increment currentSolvingStepIndex
     setGame((prevGame) => ({
@@ -881,14 +928,25 @@ const Game: React.FC = () => {
   // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
   useEffect(() => {
     const fetchNextMove = async () => {
-      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory) return;
+      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory)
+        return;
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
 
       if (game.turn === 'red') {
+        // Parse the game.lastMove, and convert the row/col to backend row/col and get the action
+        if (!game.lastMove) {
+          setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
+          return;
+        }
+
+        const { from, action } = game.lastMove;
+        const backendFromRow = game.rows - from.row - 1;
+        const backendFromCol = from.col;
+
         try {
           const res = await axios.post('/next-best-move', {
-            board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+            move: `${backendFromCol},${backendFromRow},${action}`
           });
 
           const move = res.data;
@@ -896,6 +954,8 @@ const Game: React.FC = () => {
             toast.error('No next best move found!');
             return;
           }
+
+          handleBackendMove(move);
         } catch (error: any) {
           toast.error(error.response.data);
         }
@@ -904,7 +964,7 @@ const Game: React.FC = () => {
       setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
     };
 
-    //fetchNextMove();
+    fetchNextMove();
   }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
 
   useEffect(() => {
@@ -923,7 +983,8 @@ const Game: React.FC = () => {
           currentMove: nextMove,
           lastMove: {
             from: prevGame.gameHistory[nextMove].from,
-            to: prevGame.gameHistory[nextMove].to
+            to: prevGame.gameHistory[nextMove].to,
+            action: prevGame.gameHistory[nextMove].action
           },
           boardState: nextBoardState,
           rotationAngles: prevGame.gameHistory[nextMove].rotationAngles
@@ -938,6 +999,91 @@ const Game: React.FC = () => {
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
         Khet
       </Typography>
+
+      <Dialog
+        fullWidth
+        open={game.boardSelectionOpen}
+        closeAfterTransition={false}
+        onClose={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))}
+      >
+        <DialogTitle>Select a Puzzle</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            {AVAILABLE_BOARDS.map((board) => (
+              <Grid item xs={12} sm={6} md={4} key={board.name}>
+                <Card sx={{ maxWidth: 400 }}>
+                  <CardActionArea onClick={() => selectGameBoard(board.file)}>
+                    <CardContent>
+                      <Typography gutterBottom variant="h6" component="div">
+                        {board.name}
+                      </Typography>
+                      {board.img && (
+                        <CardMedia component="img" image={board.img} alt={board.name} />
+                      )}
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={game.pieceSelectionOpen}
+        onClose={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
+      >
+        <DialogTitle>Select a Piece</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} columns={10}>
+            {['red', 'silver'].map((color) => (
+              <React.Fragment key={color}>
+                {availablePieces
+                  .filter((pieceKey: PieceType) => pieceKey.startsWith(color))
+                  .filter((pieceKey: PieceType) => {
+                    if (game.selectedCell) {
+                      const { row, col } = game.selectedCell;
+                      if (pieceKey.startsWith('red') && isAnkhSpace(row, col)) {
+                        return false;
+                      }
+                      if (pieceKey.startsWith('silver') && isEyeSpace(row, col)) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+                  .map((pieceKey: PieceType) => (
+                    <Grid item xs={2} key={pieceKey}>
+                      <img
+                        src={Pieces[pieceKey].image}
+                        width={75}
+                        height={75}
+                        alt={pieceKey}
+                        onClick={() => handlePieceSelect(pieceKey)}
+                        style={{ cursor: 'pointer', maxWidth: '100%' }}
+                      />
+                    </Grid>
+                  ))}
+              </React.Fragment>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {game.editMode ? (
         <Stack
           direction={isMobile ? 'column' : 'row'}
@@ -1032,42 +1178,6 @@ const Game: React.FC = () => {
                 Select Puzzle
               </Button>
 
-              <Dialog
-                fullWidth
-                open={game.boardSelectionOpen}
-                onClose={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))}
-              >
-                <DialogTitle>Select a Puzzle</DialogTitle>
-                <DialogContent>
-                  <Grid container spacing={2}>
-                    {AVAILABLE_BOARDS.map((board) => (
-                      <Grid item xs={12} sm={6} md={4} key={board.name}>
-                        <Card sx={{ maxWidth: 400 }}>
-                          <CardActionArea onClick={() => selectGameBoard(board.file)}>
-                            <CardContent>
-                              <Typography gutterBottom variant="h6" component="div">
-                                {board.name}
-                              </Typography>
-                              {board.img && (
-                                <CardMedia component="img" image={board.img} alt={board.name} />
-                              )}
-                            </CardContent>
-                          </CardActionArea>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </DialogContent>
-                <DialogActions>
-                  <Button
-                    onClick={() =>
-                      setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))
-                    }
-                  >
-                    Close
-                  </Button>
-                </DialogActions>
-              </Dialog>
               <Button
                 variant="contained"
                 color="secondary"
@@ -1078,54 +1188,6 @@ const Game: React.FC = () => {
               </Button>
             </Stack>
           </Paper>
-
-          <Dialog
-            open={game.pieceSelectionOpen}
-            onClose={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
-          >
-            <DialogTitle>Select a Piece</DialogTitle>
-            <DialogContent>
-              <Grid container spacing={2} columns={10}>
-                {['red', 'silver'].map((color) => (
-                  <React.Fragment key={color}>
-                    {availablePieces
-                      .filter((pieceKey: PieceType) => pieceKey.startsWith(color))
-                      .filter((pieceKey: PieceType) => {
-                        if (game.selectedCell) {
-                          const { row, col } = game.selectedCell;
-                          if (pieceKey.startsWith('red') && isAnkhSpace(row, col)) {
-                            return false;
-                          }
-                          if (pieceKey.startsWith('silver') && isEyeSpace(row, col)) {
-                            return false;
-                          }
-                        }
-                        return true;
-                      })
-                      .map((pieceKey: PieceType) => (
-                        <Grid item xs={2} key={pieceKey}>
-                          <img
-                            src={Pieces[pieceKey].image}
-                            width={75}
-                            height={75}
-                            alt={pieceKey}
-                            onClick={() => handlePieceSelect(pieceKey)}
-                            style={{ cursor: 'pointer', maxWidth: '100%' }}
-                          />
-                        </Grid>
-                      ))}
-                  </React.Fragment>
-                ))}
-              </Grid>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setGame((prevGame) => ({ ...prevGame, pieceSelectionOpen: false }))}
-              >
-                Close
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Stack>
       ) : (
         <Stack
@@ -1170,7 +1232,7 @@ const Game: React.FC = () => {
                     </Button>
                   </span>
                 </Tooltip>
-                
+
                 <Tooltip title="Move Back">
                   <span>
                     <Button
@@ -1191,7 +1253,8 @@ const Game: React.FC = () => {
                           boardState: game.gameHistory[newMove].boardState,
                           lastMove: {
                             from: game.gameHistory[newMove].from,
-                            to: game.gameHistory[newMove].to
+                            to: game.gameHistory[newMove].to,
+                            action: game.gameHistory[newMove].action
                           },
                           rotationAngles: game.gameHistory[newMove].rotationAngles || {}
                         }));
@@ -1225,7 +1288,8 @@ const Game: React.FC = () => {
                           boardState: game.gameHistory[newMove].boardState,
                           lastMove: {
                             from: game.gameHistory[newMove].from,
-                            to: game.gameHistory[newMove].to
+                            to: game.gameHistory[newMove].to,
+                            action: game.gameHistory[newMove].action
                           },
                           rotationAngles: game.gameHistory[newMove].rotationAngles || {}
                         }));

@@ -310,8 +310,17 @@ const Board: React.FC<BoardProps> = ({
               piece = pieceStr as PieceType;
             }
 
-            let isTurn =
-              game.turn === pieceStr.split('_')[0] && !game.animateHistory && !game.laserAnimating;
+            const pieceColor = pieceStr.split('_')[0];
+
+            let isTurn = true;
+            if (pieceColor === 'red' && game.ai) {
+              // AI's turn
+              isTurn = false;
+            } else if (game.turn !== pieceColor) {
+              isTurn = false;
+            }
+
+            isTurn = isTurn && !game.animateHistory && !game.laserAnimating;
 
             let borderRadius = '0';
 
