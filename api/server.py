@@ -12,6 +12,7 @@ solver = None
 def next_best_move():
     data = request.json
     move_data = data['move']
+
     previous_known_node = solver.current_node
     
     received_move = parse_move_data(move_data, previous_known_node.board)

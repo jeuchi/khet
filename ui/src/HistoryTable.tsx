@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Stack,
   Typography,
@@ -29,6 +29,7 @@ interface HistoryTableProps {
 
 function HistoryTable({ game, setGame }: HistoryTableProps) {
   const [botText, setBotText] = useState('');
+  const tableRef = useRef<HTMLTableRowElement>(null);
 
   useEffect(() => {
     if (game.ai) {
@@ -53,6 +54,13 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
       }
     }
   }, [game.ai, game.gameOver, game.callingNextMove]);
+
+  useEffect(() => {
+    // When new data is added, scroll to the bottom of the table
+    if (tableRef.current) {
+      tableRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [game.gameHistory]);
 
   return (
     <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
@@ -156,9 +164,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   >
                     <Stack direction="column" alignItems="center">
                       <img src={BuildingBlocks} alt="Building Blocks" style={{ width: '100%' }} />
-                      <Typography variant="body2" align="center" fontWeight={500}>
-                        Solving...
-                      </Typography>
+                      <span style={{ fontWeight: 500 }}>Solving...</span>
                     </Stack>
                   </Typography>
                 </>
@@ -184,58 +190,57 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
             </Stack>
           )}
         </Stack>
-        <Stack direction = "row" alignItems = "center" justifyContent = "center" spacing={2} my={1}>
-        <Tooltip title="Show Solution">
-          <span>
-        <Button
-          disabled={!game.solvingSteps || game.callingApi}
-          variant="contained"
-          onClick={() =>
-            setGame((prevGame) => ({
-              ...prevGame,
-              gameHistory: [],
-              rotationAngles: {},
-              lastMove: null,
-              isSolving: true,
-              boardState: prevGame.solvingBoardState
-            }))
-          }
-          color="primary"
-        >
-          <AutoAwesome />
-        </Button>
-        </span>
-        </Tooltip>
-                  <Tooltip title={game.animateHistory ? "Stop Autoplay" : "Autoplay History"}>
-          <span>
-          <Button
-            variant="contained"
-            color="primary"
-            disabled={game.isSolving || game.gameHistory.length === 0}
-            onClick={() =>
-              setGame((prevGame: Game) => ({
-                ...prevGame,
-                currentMove: 0,
-                lastMove: null,
-                boardState: prevGame.gameHistory[0].boardState,
-                rotationAngles: prevGame.gameHistory[0].rotationAngles,
-                animateHistory: !prevGame.animateHistory
-              }))
-            }
-          >
-            {game.animateHistory ? <Stop /> : <PlayArrow />}
-          </Button>
-          </span>
+        <Stack direction="row" alignItems="center" justifyContent="center" spacing={2} my={1}>
+          <Tooltip title="Show Solution">
+            <span>
+              <Button
+                disabled={!game.solvingSteps || game.callingApi}
+                variant="contained"
+                onClick={() =>
+                  setGame((prevGame) => ({
+                    ...prevGame,
+                    gameHistory: [],
+                    rotationAngles: {},
+                    lastMove: null,
+                    isSolving: true,
+                    boardState: prevGame.solvingBoardState
+                  }))
+                }
+                color="primary"
+              >
+                <AutoAwesome />
+              </Button>
+            </span>
           </Tooltip>
-        
-                  </Stack>
-
+          <Tooltip title={game.animateHistory ? 'Stop Autoplay' : 'Autoplay History'}>
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={game.isSolving || game.gameHistory.length === 0}
+                onClick={() =>
+                  setGame((prevGame: Game) => ({
+                    ...prevGame,
+                    currentMove: 0,
+                    lastMove: null,
+                    boardState: prevGame.gameHistory[0].boardState,
+                    rotationAngles: prevGame.gameHistory[0].rotationAngles,
+                    animateHistory: !prevGame.animateHistory
+                  }))
+                }
+              >
+                {game.animateHistory ? <Stop /> : <PlayArrow />}
+              </Button>
+            </span>
+          </Tooltip>
+        </Stack>
       </FormGroup>
       <TableContainer component={Paper} sx={{ width: '300px', height: '285px' }}>
-        <Table aria-label="game history table">
+        <Table>
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (
               <TableRow
+                ref={tableRef}
                 key={index}
                 hover
                 selected={game.currentMove === index}
@@ -244,7 +249,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                   setGame((prevGame: Game) => ({
                     ...prevGame,
                     currentMove: index,
-                    lastMove: { from: history.from, to: history.to },
+                    lastMove: { from: history.from, to: history.to, action: history.action },
                     boardState: history.boardState,
                     rotationAngles: history.rotationAngles
                   }));
