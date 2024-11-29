@@ -28,7 +28,11 @@ def next_best_move():
         print("Invalid move")
         return {"error": "Invalid move"}, 400
 
-    next_best_move = solver.get_next_best_move(received_move)
+    try: 
+        next_best_move = solver.get_next_best_move(received_move)
+    except Exception as e:
+        print("You have missed a checkmate! Out of moves!")
+        return {"error": "Out of moves"}, 404
 
     print("Next best move:")
     print_move(next_best_move)
@@ -42,12 +46,19 @@ def next_best_move():
 def solve():
     data = request.json 
     board_data = data['board']
-    board = parse_board_data(board_data)
+
+    try:
+        board = parse_board_data(board_data)
+    except Exception as e:
+        return {"error": "Invalid board"}, 400
 
     global solver    
     if solver is None or solver.root.board != board:
         solver = Solver(board, "Silver", debug=False, search_depth=6)
-        solution = solver.solve_multi_agent(solver.root)
+        try:
+            solution = solver.solve_multi_agent(solver.root)
+        except Exception as e:
+            return {"error": "No solution found"}, 404
     else:
         solution = solver.get_solution(solver.root)
 
@@ -57,6 +68,8 @@ def solve():
     solution_str = ""
     for move in solution:
         piece, action = move
+        if piece is None:
+            return {"error": "No solution found"}, 404
         r, c = piece.position
         move_str = f"{r},{c},{action}"
         solution_str += move_str + "\n"

@@ -33,6 +33,11 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
 
   useEffect(() => {
     if (game.ai) {
+      if (game.missedCheckmate) {
+        setBotText('Too many moves! Click to see solution.');
+        return;
+      }
+
       if (game.gameOver) {
         if (game.winner === 'red') {
           setBotText('I win! 😎');
@@ -53,7 +58,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
         setBotText('Ready to play!');
       }
     }
-  }, [game.ai, game.gameOver, game.callingNextMove]);
+  }, [game.ai, game.gameOver, game.callingNextMove, game.missedCheckmate]);
 
   useEffect(() => {
     // When new data is added, scroll to the bottom of the table
@@ -203,10 +208,27 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                     rotationAngles: {},
                     lastMove: null,
                     isSolving: true,
-                    boardState: prevGame.solvingBoardState
+                    boardState: prevGame.solvingBoardState,
+                    missedCheckmate: false,
+                    gameOver: false
                   }))
                 }
-                color="primary"
+                color={!game.solvingSteps || game.callingApi ? 'primary' : 'primary'}
+                sx={{
+                  background:
+                    !game.solvingSteps || game.callingApi
+                      ? 'primary'
+                      : 'linear-gradient(106.7deg, rgb(151, 150, 240) 12.1%, rgb(255, 206, 236) 63.2%);',
+                  backgroundSize: '600%',
+                  animation: game.missedCheckmate ? 'slidingWindow 3s linear infinite' : 'none',
+                  '@keyframes slidingWindow': {
+                    '0%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '50% 50%' },
+                    '100%': { backgroundPosition: '0% 50%' }
+                  },
+                  color: 'black',
+                  fontWeight: 'bold'
+                }}
               >
                 <AutoAwesome />
               </Button>

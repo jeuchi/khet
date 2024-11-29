@@ -123,6 +123,7 @@ export interface Game {
   callingNextMove: boolean;
   winner: 'silver' | 'red' | null;
   solvingBoardState: (string | null)[][];
+  missedCheckmate: boolean;
 }
 
 // Direction vectors
@@ -176,7 +177,8 @@ const Game: React.FC = () => {
     isLookingAtHistory: false,
     callingNextMove: false,
     winner: null,
-    solvingBoardState: INITIAL_BOARD_STATE
+    solvingBoardState: INITIAL_BOARD_STATE,
+    missedCheckmate: false
   });
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -285,7 +287,8 @@ const Game: React.FC = () => {
       pieceSelectionOpen: false,
       selectedCell: null,
       laserPath: [],
-      ai: false
+      ai: false,
+      missedCheckmate: false
     }));
 
   const handleMovePiece = (
@@ -811,7 +814,7 @@ const Game: React.FC = () => {
       }));
     } catch (error: any) {
       setGame((prevGame) => ({ ...prevGame, callingApi: false }));
-      toast.error(error.response.statusText);
+      toast.error(error.response.data.error || error.response.statusText);
     }
   };
 
@@ -963,7 +966,12 @@ const Game: React.FC = () => {
 
           handleBackendMove(move);
         } catch (error: any) {
-          toast.error(error.response.data);
+          // Check if 404
+          if (error.response.status === 404) {
+            setGame((prevGame) => ({ ...prevGame, missedCheckmate: true, gameOver: true }));
+          } else {
+            toast.error(error.response.data.error);
+          }
         }
       }
 
