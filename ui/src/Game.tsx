@@ -55,8 +55,11 @@ import mate3 from './assets/boards/mate_3.txt';
 import mate3Img from './assets/boards/mate-3.png';
 import mate_3_real from './assets/boards/mate_3_real.txt';
 import mate_3_realImg from './assets/boards/mate_3_real.png';
+import classic from './assets/boards/classic.txt';
+import classicImg from './assets/boards/classic.png';
 
 const AVAILABLE_BOARDS = [
+  { name: 'Classic', file: classic, img: classicImg },
   { name: 'Test 0', file: test0, img: test0Img },
   { name: 'Test 1', file: test1, img: test1Img },
   { name: 'Test 2', file: test2, img: test2Img },

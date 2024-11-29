@@ -48,8 +48,19 @@ class Solver:
         # Create the root node
 
         #self.minimax(self.root, True, search_depth)
-        self.alphabeta(self.root, self.search_depth, -float('inf'), float('inf'), True)
-        current_node = self.root
+        self.alphabeta(node, self.search_depth, -float('inf'), float('inf'), True)
+        current_node = node
+        print(f"Value: {current_node.value}")
+        move_list = []
+        while current_node.best_child is not None:
+            current_node = current_node.best_child
+            move_list.append(current_node.move)
+            print(f"Value: {current_node.value}")
+
+        return move_list
+    
+    def get_solution(self, node):
+        current_node = node
         print(f"Value: {current_node.value}")
         move_list = []
         while current_node.best_child is not None:
@@ -60,6 +71,11 @@ class Solver:
         return move_list
     
     def get_next_best_move(self, received_move):
+        previous_node = self.current_node
+        if received_move[0].color == "Silver":
+            isMax = False
+        else:
+            isMax = True
         if received_move in self.current_node.children:
             active_node = self.current_node.get_child(received_move)
         else:
@@ -67,8 +83,14 @@ class Solver:
             turn_color = received_move[0].color
             piece_destroyed = active_board.fire_laser(turn_color)
             active_node = TreeNode(self.current_node.board.make_move(received_move, check_allowed=True), self.current_node, received_move, piece_destroyed)
-            depth_remaining = self.search_depth - self.current_node.depth
-            self.alphabeta(self.current_node, depth_remaining, -float('inf'), float('inf'), True)
+            depth_remaining = self.search_depth - active_node.depth
+            self.alphabeta(active_node, depth_remaining, -float('inf'), float('inf'), isMax)
+
+        optimal_value = previous_node.best_child.value
+        if(optimal_value != active_node.value):
+            depth_remaining = self.search_depth - active_node.depth
+            print("Blunder Detected")
+            self.alphabeta(active_node, depth_remaining, -float('inf'), float('inf'), isMax)
 
 
         next_node = active_node.best_child

@@ -44,12 +44,16 @@ def solve():
     board_data = data['board']
     board = parse_board_data(board_data)
 
-    global solver
-    solver = Solver(board, "Silver", debug=False, search_depth=6)
-    solution = solver.solve_multi_agent(solver.root)
+    global solver    
+    if solver is None or solver.root.board != board:
+        solver = Solver(board, "Silver", debug=False, search_depth=6)
+        solution = solver.solve_multi_agent(solver.root)
+    else:
+        solution = solver.get_solution(solver.root)
+
+    solver.current_node = solver.root
     print_moves(solution)
 
-    
     solution_str = ""
     for move in solution:
         piece, action = move
