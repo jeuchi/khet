@@ -7,13 +7,11 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  Paper,
   Switch,
   FormGroup,
   FormControlLabel,
   Button,
-  Tooltip,
-  Box
+  Tooltip
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';

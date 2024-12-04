@@ -6,5 +6,4 @@ const axios = Axios.create({
   timeout: 0
 });
 
-
 export default axios;

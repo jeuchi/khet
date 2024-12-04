@@ -18,9 +18,9 @@ export const theme = createTheme({
 
 export const LASER_SPEED = 25;
 
-export const CELL_COLOR_MAIN =  grey[700];
+export const CELL_COLOR_MAIN = grey[700];
 export const CELL_COLOR_EYE = red[200];
-export const CELL_COLOR_ANKH = blueGrey[100]
+export const CELL_COLOR_ANKH = blueGrey[100];
 
 export const REMOVE_PIECE_COLOR = red[500];
 export const ADD_PIECE_COLOR = green[500];
