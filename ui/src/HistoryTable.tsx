@@ -7,13 +7,11 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  Paper,
   Switch,
   FormGroup,
   FormControlLabel,
   Button,
-  Tooltip,
-  Box
+  Tooltip
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';
@@ -156,6 +154,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                 <>
                   <Typography
                     variant="body2"
+                    component={'span'}
                     sx={{
                       position: 'absolute',
                       top: '-50px',
@@ -258,7 +257,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
           </Tooltip>
         </Stack>
       </FormGroup>
-      <TableContainer sx={{ width: '300px', height: 'max(150px, calc(90vh - 430px))' }}>
+      <TableContainer sx={{ width: '300px', height: 'max(150px, calc(90vh - 330px))' }}>
         <Table>
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (

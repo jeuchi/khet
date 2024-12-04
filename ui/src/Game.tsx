@@ -492,7 +492,12 @@ const Game: React.FC = () => {
               entry: cellEntry,
               exit: ''
             });
-            setGame((prevGame) => ({ ...prevGame, laserPath: [], laserAnimating: false }));
+            setGame((prevGame) => ({
+              ...prevGame,
+              laserPath: [],
+              laserAnimating: false,
+              turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
+            }));
           } else if (piece === 'red_anubis' || piece === 'silver_anubis') {
             // Check if the anubis is facing the laser. Note that 'up' is the default direction
             // and Anubis piece is looking towards the right. If he's looking towards the laser,
