@@ -296,8 +296,21 @@ const Board: React.FC<BoardProps> = ({
   }, [game.boardState]);
 
   return (
-    <Box width="650px" sx={{ height: '50px' }}>
-      <Grid container spacing={0} columns={columns}>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}
+    >
+      <Grid
+        container
+        spacing={0}
+        columns={columns}
+        sx={{
+          width: '95vh'
+        }}
+      >
         {game.boardState.map((row, rowIndex) =>
           row.map((cellValue, colIndex) => {
             // Split the cellValue by comma

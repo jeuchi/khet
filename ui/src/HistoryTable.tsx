@@ -12,7 +12,8 @@ import {
   FormGroup,
   FormControlLabel,
   Button,
-  Tooltip
+  Tooltip,
+  Box
 } from '@mui/material';
 import { Game, GameHistory } from './Game';
 import Bot from './assets/bot.svg';
@@ -68,11 +69,11 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
   }, [game.gameHistory]);
 
   return (
-    <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
+    <Stack direction="column" spacing={1} m={3} alignItems={'start'} sx={{ height: '90%' }}>
       <FormGroup>
         <Stack direction="row" alignContent={'center'} justifyContent={'start'} mt={4}>
           <FormControlLabel
-            disabled={game.isSolving || game.gameOver || game.callingApi}
+            disabled={game.isSolving || game.gameOver}
             control={
               <Switch
                 checked={game.ai}
@@ -257,7 +258,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
           </Tooltip>
         </Stack>
       </FormGroup>
-      <TableContainer component={Paper} sx={{ width: '300px', height: '285px' }}>
+      <TableContainer sx={{ width: '300px', height: 'max(150px, calc(90vh - 430px))' }}>
         <Table>
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (

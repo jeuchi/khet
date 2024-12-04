@@ -15,7 +15,8 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CardMedia
+  CardMedia,
+  Box
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -23,30 +24,14 @@ import LinkIcon from '@mui/icons-material/Link';
 import LinkOff from '@mui/icons-material/LinkOff';
 import ArrowLeft from '@mui/icons-material/ArrowLeft';
 import ArrowRight from '@mui/icons-material/ArrowRight';
+import { Gamepad, Extension, UploadFile, Save } from '@mui/icons-material';
 import Add from '@mui/icons-material/Add';
-import { Save } from '@mui/icons-material';
 import HistoryTable from './HistoryTable';
 import axios from './axios';
 import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 
-import test0 from './assets/boards/test-0.txt';
-import test0Img from './assets/boards/test-0.png';
-import test1 from './assets/boards/test-1.txt';
-import test1Img from './assets/boards/test-1.png';
-import test2 from './assets/boards/test-2.txt';
-import test2Img from './assets/boards/test-2.png';
-import test3 from './assets/boards/test-3.txt';
-import test3Img from './assets/boards/test-3.png';
-import test4 from './assets/boards/test-4.txt';
-import test4Img from './assets/boards/test-4.png';
-import test5 from './assets/boards/test-5.txt';
-import test5Img from './assets/boards/test-5.png';
-import test6 from './assets/boards/test-6.txt';
-import test6Img from './assets/boards/test-6.png';
-import test7 from './assets/boards/test-7.txt';
-import test7Img from './assets/boards/test-7.png';
 import mate1 from './assets/boards/mate_1.txt';
 import mate1Img from './assets/boards/mate-1.png';
 import mate2 from './assets/boards/mate_2.txt';
@@ -56,18 +41,8 @@ import mate3Img from './assets/boards/mate-3.png';
 import mate_3_real from './assets/boards/mate_3_real.txt';
 import mate_3_realImg from './assets/boards/mate_3_real.png';
 import classic from './assets/boards/classic.txt';
-import classicImg from './assets/boards/classic.png';
 
 const AVAILABLE_BOARDS = [
-  { name: 'Classic', file: classic, img: classicImg },
-  { name: 'Test 0', file: test0, img: test0Img },
-  { name: 'Test 1', file: test1, img: test1Img },
-  { name: 'Test 2', file: test2, img: test2Img },
-  { name: 'Test 3', file: test3, img: test3Img },
-  { name: 'Test 4', file: test4, img: test4Img },
-  { name: 'Test 5', file: test5, img: test5Img },
-  { name: 'Test 6', file: test6, img: test6Img },
-  { name: 'Test 7', file: test7, img: test7Img },
   { name: 'Mate 1', file: mate1, img: mate1Img },
   { name: 'Mate 2', file: mate2, img: mate2Img },
   { name: 'Mate 3', file: mate3, img: mate3Img },
@@ -142,17 +117,13 @@ const oppositeDirections: { [key: string]: string } = {
   left: 'right'
 };
 
-const INITIAL_BOARD_STATE = [
-  ['', '', '', ''],
-  ['', '', '', ''],
-  ['', '', '', ''],
-  ['', '', '', '']
-];
+const INITIAL_BOARD_STATE = classic;
 
 const Game: React.FC = () => {
+  const [controller, setController] = useState<AbortController | null>(null);
   const [game, setGame] = useState<Game>({
-    initialBoardState: INITIAL_BOARD_STATE,
-    boardState: INITIAL_BOARD_STATE,
+    initialBoardState: [],
+    boardState: [],
     gameHistory: [],
     rotationAngles: {},
     currentMove: 0,
@@ -177,9 +148,13 @@ const Game: React.FC = () => {
     isLookingAtHistory: false,
     callingNextMove: false,
     winner: null,
-    solvingBoardState: INITIAL_BOARD_STATE,
+    solvingBoardState: [],
     missedCheckmate: false
   });
+
+  useEffect(() => {
+    selectGameBoard(INITIAL_BOARD_STATE);
+  }, []);
 
   const isAnkhSpace = (row: number, col: number) => {
     if (game.rows - 1 === col || (row === 0 && col === 1) || (row === game.rows - 1 && col === 1)) {
@@ -274,7 +249,12 @@ const Game: React.FC = () => {
     });
   };
 
-  const resetGame = () =>
+  const resetGame = () => {
+    if (controller) {
+      controller.abort(); // Abort the ongoing API call
+      setController(null); // Reset the controller
+    }
+
     setGame((prevGame) => ({
       ...prevGame,
       boardState: prevGame.initialBoardState,
@@ -290,6 +270,7 @@ const Game: React.FC = () => {
       ai: false,
       missedCheckmate: false
     }));
+  };
 
   const handleMovePiece = (
     fromPosition: { row: number; col: number },
@@ -559,6 +540,7 @@ const Game: React.FC = () => {
             setGame((prevGame) => ({
               ...prevGame,
               boardState: newBoardState,
+              laserPath: [],
               laserAnimating: false,
               turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
             }));
@@ -781,11 +763,18 @@ const Game: React.FC = () => {
     if (!game.editMode && game.ai) {
       solveGame();
     } else if (!game.ai) {
+      if (controller) {
+        controller.abort();
+        setController(null);
+      }
       setGame((prevGame) => ({ ...prevGame, solvingSteps: null }));
     }
   }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
+    const newController = new AbortController();
+    setController(newController);
+
     setGame((prevGame) => ({
       ...prevGame,
       callingApi: true,
@@ -793,13 +782,20 @@ const Game: React.FC = () => {
     }));
 
     try {
-      const res = await axios.post('/solve', {
-        board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
-      });
+      const res = await axios.post(
+        '/solve',
+        {
+          board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+        },
+        {
+          signal: newController.signal
+        }
+      );
 
       const solution = res.data;
       if (!solution) {
         toast.error('No solution found!');
+        setGame((prevGame) => ({ ...prevGame, callingApi: false, ai: false }));
         return;
       }
 
@@ -1009,9 +1005,15 @@ const Game: React.FC = () => {
   }, [game.animateHistory, game.laserAnimating]);
 
   return (
-    <Stack>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}
+    >
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
-        Khet
+        Khet Puzzle Solver
       </Typography>
 
       <Dialog
@@ -1102,7 +1104,7 @@ const Game: React.FC = () => {
         <Stack
           direction={isMobile ? 'column' : 'row'}
           spacing={2}
-          alignItems="start"
+          alignItems="stretch"
           justifyContent={'center'}
         >
           <Board
@@ -1113,9 +1115,9 @@ const Game: React.FC = () => {
             onRotatePiece={handleRotatePiece}
           />
 
-          <Paper elevation={20} sx={{ borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ minWidth: '280px', maxWidth: '380px', borderRadius: 5 }}>
             <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
-              <Stack direction="column" justifyContent={'space-evenly'}>
+              <Stack direction="row" justifyContent={'space-evenly'}>
                 <TextField
                   label="Rows"
                   type="number"
@@ -1159,6 +1161,8 @@ const Game: React.FC = () => {
               </Stack>
 
               <Button
+                startIcon={<Save />}
+                fullWidth
                 variant="contained"
                 color="primary"
                 onClick={() =>
@@ -1170,6 +1174,8 @@ const Game: React.FC = () => {
               </Button>
 
               <Button
+                startIcon={<UploadFile />}
+                fullWidth
                 variant="contained"
                 color="primary"
                 component="label"
@@ -1184,6 +1190,8 @@ const Game: React.FC = () => {
               </Button>
 
               <Button
+                startIcon={<Extension />}
+                fullWidth
                 variant="contained"
                 color="primary"
                 onClick={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: true }))}
@@ -1193,6 +1201,8 @@ const Game: React.FC = () => {
               </Button>
 
               <Button
+                fullWidth
+                startIcon={<Gamepad />}
                 variant="contained"
                 color="secondary"
                 onClick={startGame}
@@ -1206,13 +1216,13 @@ const Game: React.FC = () => {
       ) : (
         <Stack
           direction={isMobile ? 'column' : 'row'}
-          alignItems="start"
+          alignItems="stretch"
           spacing={2}
           justifyContent={'center'}
         >
           <Board game={game} onMovePiece={handleMovePiece} onRotatePiece={handleRotatePiece} />
 
-          <Paper elevation={20} sx={{ width: '350px', borderRadius: 5 }}>
+          <Paper elevation={20} sx={{ minWidth: '300px', maxWidth: '400px', borderRadius: 5 }}>
             <Stack direction="column" spacing={3} m={3} alignItems={'start'}>
               <HistoryTable game={game} setGame={setGame} />
 
@@ -1319,7 +1329,7 @@ const Game: React.FC = () => {
           </Paper>
         </Stack>
       )}
-    </Stack>
+    </Box>
   );
 };
 
