@@ -38,15 +38,15 @@ import mate2 from './assets/boards/mate_2.txt';
 import mate2Img from './assets/boards/mate-2.png';
 import mate3 from './assets/boards/mate_3.txt';
 import mate3Img from './assets/boards/mate-3.png';
-import mate_3_real from './assets/boards/mate_3_real.txt';
-import mate_3_realImg from './assets/boards/mate_3_real.png';
+import HandOfAnubis from './assets/boards/hand_of_anubis.txt';
+import HandOfAnubisImg from './assets/boards/hand_of_anubis.png';
 import classic from './assets/boards/classic.txt';
 
 const AVAILABLE_BOARDS = [
   { name: 'Mate 1', file: mate1, img: mate1Img },
   { name: 'Mate 2', file: mate2, img: mate2Img },
   { name: 'Mate 3', file: mate3, img: mate3Img },
-  { name: 'Mate 3 Real', file: mate_3_real, img: mate_3_realImg }
+  { name: 'Hand of Anubis', file: HandOfAnubis, img: HandOfAnubisImg }
 ];
 
 export interface GameHistory {
