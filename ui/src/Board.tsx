@@ -300,7 +300,7 @@ const Board: React.FC<BoardProps> = ({
       spacing={0}
       columns={columns}
       sx={{
-        width: `calc(85vh - ${(rows - 4) * 10}vh + ${(columns - 4) * 10}vh)`
+        width: `calc(80vh - ${(rows - 4) * 10}vh + ${(columns - 4) * 10}vh)`
       }}
     >
       {game.boardState.map((row, rowIndex) =>
