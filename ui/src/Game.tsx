@@ -32,6 +32,7 @@ import { DIRECTION_TO_ROTATION, LASER_SPEED } from './constants';
 import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 
+import classic from './assets/boards/classic.txt';
 import mate1 from './assets/boards/mate_1.txt';
 import mate1Img from './assets/boards/mate-1.png';
 import mate2 from './assets/boards/mate_2.txt';
@@ -40,12 +41,14 @@ import mate3 from './assets/boards/mate_3.txt';
 import mate3Img from './assets/boards/mate-3.png';
 import HandOfAnubis from './assets/boards/hand_of_anubis.txt';
 import HandOfAnubisImg from './assets/boards/hand_of_anubis.png';
-import classic from './assets/boards/classic.txt';
+import SneakySphinx from './assets/boards/sneaky_sphinx.txt';
+import SneakySphinxImg from './assets/boards/sneaky_sphinx.png';
 
 const AVAILABLE_BOARDS = [
   { name: 'Mate 1', file: mate1, img: mate1Img },
   { name: 'Mate 2', file: mate2, img: mate2Img },
   { name: 'Mate 3', file: mate3, img: mate3Img },
+  { name: 'Sneaky Sphinx', file: SneakySphinx, img: SneakySphinxImg },
   { name: 'Hand of Anubis', file: HandOfAnubis, img: HandOfAnubisImg }
 ];
 
