@@ -157,7 +157,7 @@ const Game: React.FC = () => {
   }, []);
 
   const isAnkhSpace = (row: number, col: number) => {
-    if (game.rows - 1 === col || (row === 0 && col === 1) || (row === game.rows - 1 && col === 1)) {
+    if (game.cols - 1 === col || (row === 0 && col === 1) || (row === game.rows - 1 && col === 1)) {
       return true;
     }
     return false;
@@ -294,7 +294,7 @@ const Game: React.FC = () => {
       const newRotationAngles = { ...prevGame.rotationAngles };
       const fromCellKey = `${fromPosition.row}-${fromPosition.col}`;
       const toCellKey = `${toPosition.row}-${toPosition.col}`;
-      newRotationAngles[toCellKey] = newRotationAngles[fromCellKey] || 0;
+      newRotationAngles[toCellKey] = newRotationAngles[fromCellKey];
       delete newRotationAngles[fromCellKey];
 
       const newBoardState = prevGame.boardState.map((r) => r.slice());
@@ -517,7 +517,12 @@ const Game: React.FC = () => {
                 entry: cellEntry,
                 exit: ''
               });
-              setGame((prevGame) => ({ ...prevGame, laserPath: [...path], laserAnimating: false }));
+              setGame((prevGame) => ({
+                ...prevGame,
+                laserPath: [...path],
+                laserAnimating: false,
+                turn: prevGame.currentMove % 2 === 0 ? 'red' : 'silver'
+              }));
               setTimeout(
                 () => setGame((prevGame) => ({ ...prevGame, laserPath: [] })),
                 LASER_SPEED * 5
@@ -1109,7 +1114,7 @@ const Game: React.FC = () => {
         <Stack
           direction={isMobile ? 'column' : 'row'}
           spacing={2}
-          alignItems="stretch"
+          alignItems="flex-start"
           justifyContent={'center'}
         >
           <Board
@@ -1221,7 +1226,7 @@ const Game: React.FC = () => {
       ) : (
         <Stack
           direction={isMobile ? 'column' : 'row'}
-          alignItems="stretch"
+          alignItems="flex-start"
           spacing={2}
           justifyContent={'center'}
         >

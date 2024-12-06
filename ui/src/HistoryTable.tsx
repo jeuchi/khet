@@ -67,7 +67,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
   }, [game.gameHistory]);
 
   return (
-    <Stack direction="column" spacing={1} m={3} alignItems={'start'} sx={{ height: '90%' }}>
+    <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
       <FormGroup>
         <Stack direction="row" alignContent={'center'} justifyContent={'start'} mt={4}>
           <FormControlLabel
@@ -257,7 +257,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
           </Tooltip>
         </Stack>
       </FormGroup>
-      <TableContainer sx={{ width: '300px', height: 'max(150px, calc(90vh - 330px))' }}>
+      <TableContainer sx={{ width: '300px', height: '500px' }}>
         <Table>
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (
