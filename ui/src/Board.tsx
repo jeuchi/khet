@@ -70,7 +70,7 @@ const MoveHighlight = styled('div')({
 const CellLabel = styled('div')({
   position: 'absolute',
   color: '#000',
-  fontSize: '0.7rem',
+  fontSize: '1.2rem',
   fontWeight: 'bold'
 });
 
@@ -451,9 +451,9 @@ const Board: React.FC<BoardProps> = ({
                     <Sprite
                       src={SilverAnkh}
                       alt="Silver Ankh"
-                      sx={{ position: 'absolute', left: '10px', top: '10px' }}
-                      width={'20%'}
-                      height={'20%'}
+                      sx={{ position: 'absolute', left: '15px', top: '15px' }}
+                      width={'18%'}
+                      height={'18%'}
                     />
                   )}
 
@@ -461,9 +461,9 @@ const Board: React.FC<BoardProps> = ({
                     <Sprite
                       src={RedEye}
                       alt="Red Eye"
-                      sx={{ position: 'absolute', left: '10px', top: '10px' }}
-                      width={'20%'}
-                      height={'20%'}
+                      sx={{ position: 'absolute', left: '15px', top: '15px' }}
+                      width={'18%'}
+                      height={'18%'}
                     />
                   )}
 

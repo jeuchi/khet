@@ -33,23 +33,20 @@ import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 
 import classic from './assets/boards/classic.txt';
-import mate1 from './assets/boards/mate_1.txt';
-import mate1Img from './assets/boards/mate-1.png';
-import mate2 from './assets/boards/mate_2.txt';
-import mate2Img from './assets/boards/mate-2.png';
-import mate3 from './assets/boards/mate_3.txt';
-import mate3Img from './assets/boards/mate-3.png';
+import Lasers from './assets/boards/lasers.txt';
+import LasersImg from './assets/boards/lasers.png';
 import HandOfAnubis from './assets/boards/hand_of_anubis.txt';
 import HandOfAnubisImg from './assets/boards/hand_of_anubis.png';
 import SneakySphinx from './assets/boards/sneaky_sphinx.txt';
 import SneakySphinxImg from './assets/boards/sneaky_sphinx.png';
+import ThePharaohsTomb from './assets/boards/the_pharaohs_tomb.txt';
+import ThePharaohsTombImg from './assets/boards/the_pharaohs_tomb.png';
 
 const AVAILABLE_BOARDS = [
-  { name: 'Mate 1', file: mate1, img: mate1Img },
-  { name: 'Mate 2', file: mate2, img: mate2Img },
-  { name: 'Mate 3', file: mate3, img: mate3Img },
+  { name: 'Lasers Lasers Lasers!', file: Lasers, img: LasersImg },
   { name: 'Sneaky Sphinx', file: SneakySphinx, img: SneakySphinxImg },
-  { name: 'Hand of Anubis', file: HandOfAnubis, img: HandOfAnubisImg }
+  { name: 'Hand of Anubis', file: HandOfAnubis, img: HandOfAnubisImg },
+  { name: `The Pharaoh's Tomb`, file: ThePharaohsTomb, img: ThePharaohsTombImg }
 ];
 
 export interface GameHistory {
@@ -1030,7 +1027,7 @@ const Game: React.FC = () => {
       </Typography>
 
       <Dialog
-        fullWidth
+        maxWidth="lg"
         open={game.boardSelectionOpen}
         closeAfterTransition={false}
         onClose={() => setGame((prevGame) => ({ ...prevGame, boardSelectionOpen: false }))}
@@ -1040,7 +1037,7 @@ const Game: React.FC = () => {
           <Grid container spacing={2}>
             {AVAILABLE_BOARDS.map((board) => (
               <Grid item xs={12} sm={6} md={4} key={board.name}>
-                <Card sx={{ maxWidth: 400 }}>
+                <Card>
                   <CardActionArea onClick={() => selectGameBoard(board.file)}>
                     <CardContent>
                       <Typography gutterBottom variant="h6" component="div">
