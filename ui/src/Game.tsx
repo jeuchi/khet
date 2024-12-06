@@ -123,7 +123,7 @@ const INITIAL_BOARD_STATE = classic;
 const Game: React.FC = () => {
   const [controller, setController] = useState<AbortController | null>(null);
   const [game, setGame] = useState<Game>({
-    title: 'Khet Classic',
+    title: 'Classic',
     initialBoardState: [],
     boardState: [],
     gameHistory: [],
@@ -155,7 +155,7 @@ const Game: React.FC = () => {
   });
 
   useEffect(() => {
-    selectGameBoard('Khet Classic', INITIAL_BOARD_STATE);
+    selectGameBoard('Classic', INITIAL_BOARD_STATE);
   }, []);
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -214,7 +214,7 @@ const Game: React.FC = () => {
       const newBoardState = prevGame.boardState.map((r) => r.slice());
       const { row, col } = prevGame.selectedCell || { row: 0, col: 0 };
       newBoardState[row][col] = piece;
-      return { ...prevGame, boardState: newBoardState, pieceSelectionOpen: false };
+      return { ...prevGame, title: 'Custom', boardState: newBoardState, pieceSelectionOpen: false };
     });
   };
 
@@ -704,6 +704,7 @@ const Game: React.FC = () => {
 
       return {
         ...prevGame,
+        title: prevGame.editMode ? 'Custom' : prevGame.title,
         boardState: newBoardState,
         rotationAngles: newRotationAngles,
         gameHistory: prevGame.editMode
