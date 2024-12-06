@@ -59,6 +59,7 @@ export interface GameHistory {
 }
 
 export interface Game {
+  title: string;
   initialBoardState: (string | null)[][];
   boardState: (string | null)[][];
   gameHistory: GameHistory[];
@@ -122,6 +123,7 @@ const INITIAL_BOARD_STATE = classic;
 const Game: React.FC = () => {
   const [controller, setController] = useState<AbortController | null>(null);
   const [game, setGame] = useState<Game>({
+    title: 'Khet Classic',
     initialBoardState: [],
     boardState: [],
     gameHistory: [],
@@ -153,7 +155,7 @@ const Game: React.FC = () => {
   });
 
   useEffect(() => {
-    selectGameBoard(INITIAL_BOARD_STATE);
+    selectGameBoard('Khet Classic', INITIAL_BOARD_STATE);
   }, []);
 
   const isAnkhSpace = (row: number, col: number) => {
@@ -184,6 +186,7 @@ const Game: React.FC = () => {
 
     setGame((prevGame) => ({
       ...prevGame,
+      title: 'Custom',
       boardState: newBoardState,
       rows: newRows,
       cols: newCols
@@ -743,13 +746,14 @@ const Game: React.FC = () => {
     a.click();
   };
 
-  const selectGameBoard = async (file: string) => {
+  const selectGameBoard = async (name: string, file: string) => {
     try {
       const response = await fetch(file);
       const content = await response.text();
       const newBoardState = JSON.parse(content);
       setGame((prevGame) => ({
         ...prevGame,
+        title: name,
         boardState: newBoardState,
         boardSelectionOpen: false
       }));
@@ -1023,7 +1027,7 @@ const Game: React.FC = () => {
       }}
     >
       <Typography variant="h3" align="center" style={{ marginBottom: 25, fontWeight: 500 }}>
-        Khet Puzzle Solver
+        {game.editMode ? 'Khet Configuration' : game.title}
       </Typography>
 
       <Dialog
@@ -1038,7 +1042,7 @@ const Game: React.FC = () => {
             {AVAILABLE_BOARDS.map((board) => (
               <Grid item xs={12} sm={6} md={4} key={board.name}>
                 <Card>
-                  <CardActionArea onClick={() => selectGameBoard(board.file)}>
+                  <CardActionArea onClick={() => selectGameBoard(board.name, board.file)}>
                     <CardContent>
                       <Typography gutterBottom variant="h6" component="div">
                         {board.name}
