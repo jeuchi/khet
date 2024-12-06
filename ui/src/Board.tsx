@@ -165,7 +165,7 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    if (game.laserAnimating || game.gameOver || game.isLookingAtHistory) {
+    if (game.laserAnimating || game.gameOver || game.isLookingAtHistory || game.callingNextMove) {
       return;
     }
 
