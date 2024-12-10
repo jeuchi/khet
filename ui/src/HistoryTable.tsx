@@ -257,7 +257,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
           </Tooltip>
         </Stack>
       </FormGroup>
-      <TableContainer sx={{ width: '300px', height: '500px' }}>
+      <TableContainer sx={{ width: '300px', height: '400px' }}>
         <Table>
           <TableBody>
             {game.gameHistory.map((history: GameHistory, index) => (
