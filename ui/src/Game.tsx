@@ -787,6 +787,18 @@ const Game: React.FC = () => {
   }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
+    if (game.title === 'Lasers Lasers Lasers!') {
+      // Mate in 1 :)
+      setGame((prevGame) => ({
+        ...prevGame,
+        solvingBoardState: prevGame.boardState,
+        solvingSteps: ['2,5,NORTH_EAST'],
+        currentSolvingStepIndex: 0,
+        callingApi: false
+      }));
+      return;
+    }
+
     const newController = new AbortController();
     setController(newController);
 
@@ -957,6 +969,16 @@ const Game: React.FC = () => {
         // Parse the game.lastMove, and convert the row/col to backend row/col and get the action
         if (!game.lastMove) {
           setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
+          return;
+        }
+
+        if (game.title === 'Lasers Lasers Lasers!') {
+          // Mate in 1 :)
+          setGame((prevGame) => ({
+            ...prevGame,
+            missedCheckmate: true,
+            gameOver: true
+          }));
           return;
         }
 
