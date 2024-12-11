@@ -82,7 +82,7 @@ const ScarabMoveList = (
     const newRow = position.row + dir.row;
     const newCol = position.col + dir.col;
     if (newRow >= 0 && newRow < boardState.length && newCol >= 0 && newCol < boardState[0].length) {
-      const piece = boardState[newRow][newCol]?.split('_')[1];
+      const piece = boardState[newRow][newCol]?.split('_')[1]?.split(',')[0];
       if (piece !== 'scarab' && piece !== 'pharaoh' && piece !== 'sphinx') {
         moves.push({ row: newRow, col: newCol });
       }
