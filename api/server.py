@@ -16,17 +16,20 @@ def next_best_move():
 
     global solver
     previous_known_node = solver.current_node
-    
-    received_move = parse_move_data(move_data, previous_known_node.board)
 
-    print("Received move:")
-    print_moves([received_move])
-    print(f"Move valid: {previous_known_node.board.check_move(received_move)}")
-
+    received_move = None
     
-    if previous_known_node.board.check_move(received_move) == False:
-        print("Invalid move")
-        return {"error": "Invalid move"}, 400
+    if move_data:
+        received_move = parse_move_data(move_data, previous_known_node.board)
+
+        print("Received move:")
+        print_moves([received_move])
+        print(f"Move valid: {previous_known_node.board.check_move(received_move)}")
+
+        
+        if previous_known_node.board.check_move(received_move) == False:
+            print("Invalid move")
+            return {"error": "Invalid move"}, 400
 
     try: 
         next_best_move = solver.get_next_best_move(received_move)

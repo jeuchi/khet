@@ -71,34 +71,52 @@ class Solver:
         return move_list
     
     def get_next_best_move(self, received_move):
+        # Handle the case where no move is received
+        if received_move is None:
+            # If no move is received, make the first optimal move for Silver
+            if self.current_node.best_child is None:
+                self.alphabeta(self.current_node, self.search_depth, -float('inf'), float('inf'), True)
+            next_node = self.current_node.best_child
+            next_best_move = next_node.move
+
+            # Update the current node
+            self.current_node = next_node
+            return next_best_move
+        
+        # Handle the case where a move is received
         previous_node = self.current_node
-        if received_move[0].color == "Silver":
-            isMax = False
-        else:
-            isMax = True
+        isMax = received_move[0].color != "Silver"
+
         if received_move in self.current_node.children:
             active_node = self.current_node.get_child(received_move)
         else:
             active_board = self.current_node.board.make_move(received_move, check_allowed=True)
             turn_color = received_move[0].color
             piece_destroyed = active_board.fire_laser(turn_color)
-            active_node = TreeNode(self.current_node.board.make_move(received_move, check_allowed=True), self.current_node, received_move, piece_destroyed)
+            active_node = TreeNode(
+                active_board,
+                self.current_node,
+                received_move,
+                piece_destroyed
+            )
             depth_remaining = self.search_depth - active_node.depth
             self.alphabeta(active_node, depth_remaining, -float('inf'), float('inf'), isMax)
 
+        # Check for blunders
         optimal_value = previous_node.best_child.value
-        if(optimal_value != active_node.value):
-            depth_remaining = self.search_depth - active_node.depth
+        if optimal_value != active_node.value:
             print("Blunder Detected")
+            depth_remaining = self.search_depth - active_node.depth
             self.alphabeta(active_node, depth_remaining, -float('inf'), float('inf'), isMax)
 
-
+        # Determine the next move
         next_node = active_node.best_child
         next_best_move = next_node.move
 
+        # Update the current node
         self.current_node = next_node
         return next_best_move
-        
+            
     def minimax(self, node, is_max, search_depth):
         turn_color = self.player_color if is_max else self.opponent_color
 

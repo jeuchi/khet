@@ -318,7 +318,7 @@ const Board: React.FC<BoardProps> = ({
           const pieceColor = pieceStr.split('_')[0];
 
           let isTurn = true;
-          if (pieceColor === 'red' && game.ai) {
+          if (pieceColor !== game.player && game.ai) {
             // AI's turn
             isTurn = false;
           } else if (game.turn !== pieceColor) {
