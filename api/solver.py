@@ -9,14 +9,13 @@ import networkx as nx
 
 
 class Solver:
-    win_reward = 1e100
+    win_reward = 100
 
-    def __init__(self, starting_board, player_color, debug = False, search_depth=6, gamma = 0.9):
+    def __init__(self, starting_board, player_color, debug = False, search_depth=6):
         self.starting_board = starting_board
         self.player_color = player_color
         self.root = TreeNode(starting_board)
         self.opponent_color = "Silver" if player_color == "Red" else "Red"
-        self.gamma = gamma
         self.debug = debug
         self.current_node = self.root
         self.search_depth = search_depth
@@ -140,7 +139,7 @@ class Solver:
             print("!!!!!!!!!!!!!! NO MOVES FOUND !!!!!!!")
             self.grade_board(node)
         else:
-            node.value = node.value * self.gamma
+            node.value = node.value
         return node.value
     
 
@@ -164,11 +163,13 @@ class Solver:
                     node.best_child = child_node
                     value = child_node_value
                     alpha = child_node_value
-                if value == self.win_reward:
-                    break
+                if isinstance(child_node.piece_destroyed, Pharaoh) and child_node.piece_destroyed.color == self.opponent_color:
+                    break 
                 if alpha >= beta:
+                    if self.debug:
+                        print(f"Pruning at depth {depth} because alpha {alpha} >= beta {beta}")
                     break
-            value = value * self.gamma
+            value = value
             node.value = value
             return value
         else:
@@ -183,12 +184,14 @@ class Solver:
                     node.best_child = child_node
                     value = child_node_value
                     beta = child_node_value
-                if value == -self.win_reward:
-                    break
+                if isinstance(child_node.piece_destroyed, Pharaoh) and child_node.piece_destroyed.color == self.player_color:
+                    break 
                 if alpha >= beta:
+                    if self.debug:
+                        print(f"Pruning at depth {depth} because alpha {alpha} >= beta {beta} with parent ID {node.node_id}")
                     break
-            value = value * self.gamma
-            node.value = value * self.gamma
+            value = value
+            node.value = value
             return value
             
     def find_winning_node_single_agent(self):
@@ -222,9 +225,9 @@ class Solver:
     def grade_board(self, node):
         if isinstance(node.piece_destroyed, Pharaoh):
             if self.player_color == node.piece_destroyed.color:
-                node.value = -self.win_reward
+                node.value = -self.win_reward/node.depth
             else:
-                node.value = self.win_reward
+                node.value = self.win_reward/node.depth
         else:
             #TODO generate better heuristic
             node.value = 0
@@ -248,6 +251,7 @@ class TreeNode:
         self.best_child = None
         TreeNode.nodes_made += 1  # Increment the counter when a node is created
         TreeNode.add_visited_board(board)
+        self.node_id = TreeNode.nodes_made
 
     def get_value(self):
         return self.value

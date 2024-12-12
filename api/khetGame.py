@@ -72,22 +72,22 @@ class KhetGame:
 # Example usage
 if __name__ == "__main__":
     data_folder = Path("ui/src/assets/boards")
-    file = data_folder / "mate_3.txt"
+    file = data_folder / "the_pharaohs_tomb.txt"
     board_data_str = open(file)
     board_data=json.load(board_data_str)
     board = parse_board_data(board_data)
 
     #moves = board.get_all_possible_moves("Red")
     #print_moves(moves)
-    board.display_board()
+    #board.display_board()
 
 
-    solver = Solver(board, "Silver", debug=False)
-    solution = solver.solve_multi_agent(board, "Silver", search_depth=6)
+    solver = Solver(board, "Silver", debug=True, search_depth=5)
+    solution = solver.solve_multi_agent(solver.root, "Silver")
     print_moves(solution)
     print(f" Number of nodes made: {TreeNode.num_nodes_made()}")
 
-    move_file = data_folder / "mate_3_move_made.txt"
+    """move_file = data_folder / "mate_3_move_made.txt"
     move_str = open(move_file)
     move_data = json.load(move_str)
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     move_str = f"{r},{c},{optimal_move_action}"
     print(move_str)
     print_move(next_best_move)
-
+    """
     
     
 
