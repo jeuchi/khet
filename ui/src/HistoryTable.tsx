@@ -33,12 +33,14 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
   useEffect(() => {
     if (game.ai) {
       if (game.missedCheckmate) {
-        setBotText('Too many moves! Click to see solution.');
+        setBotText(
+          game.player === 'red' ? 'You have won?!' : 'Too many moves! Click to see solution.'
+        );
         return;
       }
 
       if (game.gameOver) {
-        if (game.winner === 'red') {
+        if (game.winner !== game.player) {
           setBotText('I win! 😎');
         } else {
           setBotText('You win! 🎉');
@@ -89,7 +91,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
             src={
               game.ai
                 ? game.gameOver
-                  ? game.winner === 'silver'
+                  ? game.winner === game.player
                     ? BotDead
                     : Bot
                   : game.callingNextMove || game.callingApi
@@ -208,7 +210,7 @@ function HistoryTable({ game, setGame }: HistoryTableProps) {
                     rotationAngles: {},
                     lastMove: null,
                     isSolving: true,
-                    boardState: prevGame.solvingBoardState,
+                    boardState: prevGame.initialBoardState,
                     missedCheckmate: false,
                     gameOver: false
                   }))

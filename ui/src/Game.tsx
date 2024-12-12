@@ -16,7 +16,11 @@ import {
   CardActionArea,
   CardContent,
   CardMedia,
-  Box
+  Box,
+  FormControl,
+  MenuItem,
+  Select,
+  InputLabel
 } from '@mui/material';
 import Board from './Board';
 import { Pieces, PieceType } from './Piece';
@@ -33,8 +37,6 @@ import { isMobile } from 'react-device-detect';
 import { toast } from 'react-toastify';
 
 import classic from './assets/boards/classic.txt';
-import Lasers from './assets/boards/lasers.txt';
-import LasersImg from './assets/boards/lasers.png';
 import HandOfAnubis from './assets/boards/hand_of_anubis.txt';
 import HandOfAnubisImg from './assets/boards/hand_of_anubis.png';
 import SneakySphinx from './assets/boards/sneaky_sphinx.txt';
@@ -43,7 +45,6 @@ import ThePharaohsTomb from './assets/boards/the_pharaohs_tomb.txt';
 import ThePharaohsTombImg from './assets/boards/the_pharaohs_tomb.png';
 
 const AVAILABLE_BOARDS = [
-  { name: 'Lasers Lasers Lasers!', file: Lasers, img: LasersImg },
   { name: 'Sneaky Sphinx', file: SneakySphinx, img: SneakySphinxImg },
   { name: 'Hand of Anubis', file: HandOfAnubis, img: HandOfAnubisImg },
   { name: `The Pharaoh's Tomb`, file: ThePharaohsTomb, img: ThePharaohsTombImg }
@@ -95,10 +96,10 @@ export interface Game {
   callingApi: boolean;
   ai: boolean;
   turn: 'silver' | 'red';
+  player: 'silver' | 'red';
   isLookingAtHistory: boolean;
   callingNextMove: boolean;
   winner: 'silver' | 'red' | null;
-  solvingBoardState: (string | null)[][];
   missedCheckmate: boolean;
 }
 
@@ -147,10 +148,10 @@ const Game: React.FC = () => {
     callingApi: false,
     ai: false,
     turn: 'silver',
+    player: 'silver',
     isLookingAtHistory: false,
     callingNextMove: false,
     winner: null,
-    solvingBoardState: [],
     missedCheckmate: false
   });
 
@@ -787,32 +788,19 @@ const Game: React.FC = () => {
   }, [game.editMode, game.ai]);
 
   const solveGame = async () => {
-    if (game.title === 'Lasers Lasers Lasers!') {
-      // Mate in 1 :)
-      setGame((prevGame) => ({
-        ...prevGame,
-        solvingBoardState: prevGame.boardState,
-        solvingSteps: ['2,5,NORTH_EAST'],
-        currentSolvingStepIndex: 0,
-        callingApi: false
-      }));
-      return;
-    }
-
     const newController = new AbortController();
     setController(newController);
 
     setGame((prevGame) => ({
       ...prevGame,
-      callingApi: true,
-      solvingBoardState: prevGame.boardState
+      callingApi: true
     }));
 
     try {
       const res = await axios.post(
         '/solve',
         {
-          board: game.boardState.map((r) => r.map((c) => (c ? c : ' ')))
+          board: game.initialBoardState.map((r) => r.map((c) => (c ? c : ' ')))
         },
         {
           signal: newController.signal
@@ -831,9 +819,15 @@ const Game: React.FC = () => {
       // Set the solving steps and start index
       setGame((prevGame) => ({
         ...prevGame,
+        boardState: game.initialBoardState,
         solvingSteps: steps,
         currentSolvingStepIndex: 0,
-        callingApi: false
+        callingApi: false,
+        gameHistory: [],
+        rotationAngles: {},
+        currentMove: 0,
+        lastMove: null,
+        turn: 'silver'
       }));
     } catch (error: any) {
       setGame((prevGame) => ({ ...prevGame, callingApi: false }));
@@ -960,35 +954,32 @@ const Game: React.FC = () => {
   // If the AI mode is enabled, check if player made their move and it's red turn to make a turn
   useEffect(() => {
     const fetchNextMove = async () => {
-      if (game.editMode || !game.ai || game.isSolving || game.gameOver || game.isLookingAtHistory)
+      if (
+        game.editMode ||
+        !game.ai ||
+        game.isSolving ||
+        game.gameOver ||
+        game.isLookingAtHistory ||
+        !game.solvingSteps
+      )
         return;
 
       setGame((prevGame) => ({ ...prevGame, callingNextMove: true }));
 
-      if (game.turn === 'red') {
+      if (game.turn !== game.player) {
         // Parse the game.lastMove, and convert the row/col to backend row/col and get the action
-        if (!game.lastMove) {
+        if (!game.lastMove && game.player === 'silver') {
           setGame((prevGame) => ({ ...prevGame, callingNextMove: false }));
           return;
         }
 
-        if (game.title === 'Lasers Lasers Lasers!') {
-          // Mate in 1 :)
-          setGame((prevGame) => ({
-            ...prevGame,
-            missedCheckmate: true,
-            gameOver: true
-          }));
-          return;
-        }
-
-        const { from, action } = game.lastMove;
+        const { from, action } = game.lastMove || { from: { row: 0, col: 0 }, action: '' };
         const backendFromRow = game.rows - from.row - 1;
         const backendFromCol = from.col;
 
         try {
           const res = await axios.post('/next-best-move', {
-            move: `${backendFromCol},${backendFromRow},${action}`
+            move: game.lastMove ? `${backendFromCol},${backendFromRow},${action}` : ''
           });
 
           const move = res.data;
@@ -1012,7 +1003,15 @@ const Game: React.FC = () => {
     };
 
     fetchNextMove();
-  }, [game.ai, game.editMode, game.turn, game.isLookingAtHistory, game.gameOver, game.isSolving]);
+  }, [
+    game.ai,
+    game.editMode,
+    game.turn,
+    game.isLookingAtHistory,
+    game.gameOver,
+    game.isSolving,
+    game.solvingSteps
+  ]);
 
   useEffect(() => {
     if (!game.animateHistory || game.laserAnimating) return;
@@ -1153,7 +1152,7 @@ const Game: React.FC = () => {
           />
 
           <Paper elevation={20} sx={{ minWidth: '280px', maxWidth: '380px', borderRadius: 5 }}>
-            <Stack direction="column" spacing={1} m={3} alignItems={'start'}>
+            <Stack direction="column" spacing={2} m={3} alignItems={'start'}>
               <Stack direction="row" justifyContent={'space-evenly'}>
                 <TextField
                   label="Rows"
@@ -1197,6 +1196,24 @@ const Game: React.FC = () => {
                 />
               </Stack>
 
+              <FormControl fullWidth size="small">
+                <InputLabel id="demo-simple-select-label">Player</InputLabel>
+                <Select
+                  labelId="demo-simple-select-label"
+                  id="demo-simple-select"
+                  value={game.player}
+                  label="Player"
+                  onChange={(e) =>
+                    setGame((prevGame) => ({
+                      ...prevGame,
+                      player: e.target.value as 'silver' | 'red'
+                    }))
+                  }
+                >
+                  <MenuItem value={'silver'}>Silver</MenuItem>
+                  <MenuItem value={'red'}>Red</MenuItem>
+                </Select>
+              </FormControl>
               <Button
                 startIcon={<Save />}
                 fullWidth
@@ -1205,7 +1222,7 @@ const Game: React.FC = () => {
                 onClick={() =>
                   saveGameBoard(new Blob([JSON.stringify(game.boardState)], { type: 'text/plain' }))
                 }
-                style={{ marginTop: 15 }}
+                style={{ marginTop: 25 }}
               >
                 Save Board
               </Button>
