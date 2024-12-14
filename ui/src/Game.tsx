@@ -830,7 +830,7 @@ const Game: React.FC = () => {
         turn: 'silver'
       }));
     } catch (error: any) {
-      setGame((prevGame) => ({ ...prevGame, callingApi: false }));
+      setGame((prevGame) => ({ ...prevGame, callingApi: false, ai: false }));
       toast.error('Error solving the game');
     }
   };
@@ -995,6 +995,7 @@ const Game: React.FC = () => {
             setGame((prevGame) => ({ ...prevGame, missedCheckmate: true, gameOver: true }));
           } else {
             toast.error('Error fetching next best move');
+            setGame((prevGame) => ({ ...prevGame, ai: false }));
           }
         }
       }
