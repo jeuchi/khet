@@ -831,7 +831,7 @@ const Game: React.FC = () => {
       }));
     } catch (error: any) {
       setGame((prevGame) => ({ ...prevGame, callingApi: false }));
-      toast.error(error.response.data.error || error.response.statusText);
+      toast.error('Error solving the game');
     }
   };
 
@@ -994,7 +994,7 @@ const Game: React.FC = () => {
           if (error.response.status === 404) {
             setGame((prevGame) => ({ ...prevGame, missedCheckmate: true, gameOver: true }));
           } else {
-            toast.error(error.response.data.error);
+            toast.error('Error fetching next best move');
           }
         }
       }
